@@ -1,4 +1,4 @@
-import { test } from '@playwright/test';
+import { test } from '../fixtures/test';
 import { ai } from '@zerostep/playwright';
 
 test('shopify automation', async ({ page }) => {

@@ -1,51 +1,52 @@
-import { test } from '@playwright/test';
+import { test } from '../fixtures/test';
 import { authenticateShopify } from '../utils/shopify-auth';
+import { goToCreatePoPage } from '../utils/shopify-navigation';
+import { fillPurchaseOrderForm, selectProductsWithAI } from '../utils/fill-purchase-order';
 
 test('shopify automation', async ({ page }) => {
   const aiArgs = { page, test };
 
-  // Use environment variables for username and password
-  const username = process.env.USERNAME;
-  const password = process.env.PASS;
+  // Check if already logged in by navigating to Shopify admin
+  await page.goto('https://admin.shopify.com');
+  await page.waitForTimeout(7000);
 
-  if (!username || !password) {
-    throw new Error('USERNAME and PASS environment variables must be set');
+  // Check if we're already logged in by looking for admin dashboard elements
+  const isLoggedIn = await page
+    .locator('nav, [data-testid*="navigation"], a:has-text("Products")')
+    .first()
+    .isVisible({ timeout: 3000 })
+    .catch(() => false);
+
+  if (!isLoggedIn) {
+    // Use environment variables for username and password
+    const username = process.env.USERNAME;
+    const password = process.env.PASS;
+
+    if (!username || !password) {
+      throw new Error('USERNAME and PASS environment variables must be set');
+    }
+
+    // Authenticate with Shopify
+    await authenticateShopify(page, username, password);
+    console.log('Shopify authentication completed');
+  } else {
+    console.log('Already logged in, skipping authentication');
   }
-
-  // Authenticate with Shopify
-  await authenticateShopify(page, username, password);
 
   console.log('Shopify page loaded');
 
   // Wait for the page to fully load after login
   await page.waitForTimeout(3000);
 
-  // On the sidebar, click on "Products"
-  const productsLink = page.locator('a:has-text("Products"), [data-testid*="products"], nav a:has-text("Products")');
-  await productsLink.waitFor({ state: 'visible', timeout: 10000 });
-  await productsLink.click();
-  console.log('Clicked on Products');
+  // Navigate to Create Purchase Order page
+  await goToCreatePoPage(page);
 
-  // Wait for navigation
+  // Wait for the form to load
   await page.waitForTimeout(2000);
 
-  // Click on "Purchase orders"
-  const purchaseOrdersLink = page.locator('a:has-text("Purchase orders"), button:has-text("Purchase orders"), [data-testid*="purchase-orders"]');
-  await purchaseOrdersLink.waitFor({ state: 'visible', timeout: 10000 });
-  await purchaseOrdersLink.click();
-  console.log('Clicked on Purchase orders');
+  // Fill in the purchase order form with data from mockData.json
+  await fillPurchaseOrderForm(page, test);
 
-  // Wait for navigation
-  await page.waitForTimeout(2000);
-
-  // Click on "Create purchase order"
-  const createPurchaseOrderButton = page.locator(
-    'button:has-text("Create purchase order"), a:has-text("Create purchase order"), [data-testid*="create-purchase-order"]'
-  );
-  await createPurchaseOrderButton.waitFor({ state: 'visible', timeout: 10000 });
-  await createPurchaseOrderButton.click();
-  console.log('Clicked on Create purchase order');
-
-  // Wait for navigation
-  await page.waitForTimeout(5000);
+  // Select products using AI
+  await selectProductsWithAI(page, test);
 });
