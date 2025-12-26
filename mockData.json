@@ -13,73 +13,7 @@
       "buyerEmail": "buyer@piperow.com",
       "orderDate": "2025-01-10",
       "headline": "Spring 2025 Collection",
-      "items": [
-        {
-          "orderItemId": 1001,
-          "productName": "Classic Leather Tote Bag",
-          "sku": "CLT-001-BLK",
-          "quantity": 25,
-          "price": 289.00,
-          "size": "Large",
-          "color": "Black",
-          "shipDate": "2025-02-15",
-          "approved": false,
-          "imageUrl": null,
-          "imageIsPlaceholder": true
-        },
-        {
-          "orderItemId": 1002,
-          "productName": "Vintage Crossbody Satchel",
-          "sku": "VCS-002-TAN",
-          "quantity": 15,
-          "price": 195.00,
-          "size": "Medium",
-          "color": "Tan Brown",
-          "shipDate": "2025-02-15",
-          "approved": false,
-          "imageUrl": null,
-          "imageIsPlaceholder": true
-        },
-        {
-          "orderItemId": 1003,
-          "productName": "Mini Bucket Bag",
-          "sku": "MBB-003-WHT",
-          "quantity": 30,
-          "price": 145.00,
-          "size": "Small",
-          "color": "Off White",
-          "shipDate": "2025-02-20",
-          "approved": false,
-          "imageUrl": null,
-          "imageIsPlaceholder": true
-        },
-        {
-          "orderItemId": 1004,
-          "productName": "Structured Shoulder Bag",
-          "sku": "SSB-004-NVY",
-          "quantity": 20,
-          "price": 225.00,
-          "size": "Medium",
-          "color": "Navy Blue",
-          "shipDate": "2025-02-20",
-          "approved": true,
-          "imageUrl": null,
-          "imageIsPlaceholder": true
-        },
-        {
-          "orderItemId": 1005,
-          "productName": "Woven Straw Tote",
-          "sku": "WST-005-NAT",
-          "quantity": 40,
-          "price": 89.00,
-          "size": "Large",
-          "color": "Natural",
-          "shipDate": "2025-03-01",
-          "approved": false,
-          "imageUrl": null,
-          "imageIsPlaceholder": true
-        }
-      ]
+      "items": []
     },
     {
       "orderTaskId": 102,
@@ -94,47 +28,7 @@
       "buyerEmail": "buyer@piperow.com",
       "orderDate": "2025-01-16",
       "headline": "Resort Collection",
-      "items": [
-        {
-          "orderItemId": 2001,
-          "productName": "Quilted Chain Bag",
-          "sku": "QCB-001-BLK",
-          "quantity": 12,
-          "price": 350.00,
-          "size": "Small",
-          "color": "Black Glossy",
-          "shipDate": "2025-02-28",
-          "approved": false,
-          "imageUrl": null,
-          "imageIsPlaceholder": true
-        },
-        {
-          "orderItemId": 2002,
-          "productName": "Suede Hobo Bag",
-          "sku": "SHB-002-CAM",
-          "quantity": 18,
-          "price": 275.00,
-          "size": "Large",
-          "color": "Camel",
-          "shipDate": "2025-02-28",
-          "approved": false,
-          "imageUrl": null,
-          "imageIsPlaceholder": true
-        },
-        {
-          "orderItemId": 2003,
-          "productName": "Patent Leather Clutch",
-          "sku": "PLC-003-RED",
-          "quantity": 25,
-          "price": 125.00,
-          "size": "One Size",
-          "color": "Cherry Red",
-          "shipDate": "2025-03-05",
-          "approved": false,
-          "imageUrl": null,
-          "imageIsPlaceholder": true
-        }
-      ]
+      "items": []
     },
     {
       "orderTaskId": 103,
@@ -149,107 +43,8 @@
       "buyerEmail": "buyer@piperow.com",
       "orderDate": "2025-01-18",
       "headline": "Summer Essentials",
-      "items": [
-        {
-          "orderItemId": 3001,
-          "productName": "Canvas Weekender Bag",
-          "sku": "CWB-001-GRY",
-          "quantity": 10,
-          "price": 189.00,
-          "size": "XL",
-          "color": "Charcoal Grey",
-          "shipDate": "2025-03-10",
-          "approved": false,
-          "imageUrl": null,
-          "imageIsPlaceholder": true
-        },
-        {
-          "orderItemId": 3002,
-          "productName": "Leather Backpack",
-          "sku": "LBP-002-BRN",
-          "quantity": 15,
-          "price": 320.00,
-          "size": "Medium",
-          "color": "Cognac Brown",
-          "shipDate": "2025-03-10",
-          "approved": false,
-          "imageUrl": null,
-          "imageIsPlaceholder": true
-        },
-        {
-          "orderItemId": 3003,
-          "productName": "Nylon Crossbody",
-          "sku": "NCB-003-BLK",
-          "quantity": 50,
-          "price": 75.00,
-          "size": "Small",
-          "color": "Matte Black",
-          "shipDate": "2025-03-15",
-          "approved": false,
-          "imageUrl": null,
-          "imageIsPlaceholder": true
-        },
-        {
-          "orderItemId": 3004,
-          "productName": "Raffia Beach Tote",
-          "sku": "RBT-004-MUL",
-          "quantity": 35,
-          "price": 110.00,
-          "size": "Large",
-          "color": "Multi Stripe",
-          "shipDate": "2025-03-15",
-          "approved": false,
-          "imageUrl": null,
-          "imageIsPlaceholder": true
-        }
-      ]
+      "items": []
     }
   ],
-  "approvedItems": [
-    {
-      "orderItemId": 4001,
-      "orderTaskId": 100,
-      "productName": "Leather Belt Bag",
-      "sku": "LBB-001-BLK",
-      "quantity": 20,
-      "price": 165.00,
-      "size": "One Size",
-      "color": "Black",
-      "brandName": "MARGESHERWOOD",
-      "shipDate": "2025-01-30",
-      "shopifyProductId": 8234567890123,
-      "imageUrl": null,
-      "imageIsPlaceholder": true
-    },
-    {
-      "orderItemId": 4002,
-      "orderTaskId": 100,
-      "productName": "Croc Embossed Wallet",
-      "sku": "CEW-002-GRN",
-      "quantity": 30,
-      "price": 95.00,
-      "size": "Small",
-      "color": "Forest Green",
-      "brandName": "STAND STUDIO",
-      "shipDate": "2025-01-30",
-      "shopifyProductId": 8234567890124,
-      "imageUrl": null,
-      "imageIsPlaceholder": true
-    },
-    {
-      "orderItemId": 4003,
-      "orderTaskId": 99,
-      "productName": "Puffer Shoulder Bag",
-      "sku": "PSB-003-PNK",
-      "quantity": 15,
-      "price": 210.00,
-      "size": "Medium",
-      "color": "Dusty Pink",
-      "brandName": "GANNI",
-      "shipDate": "2025-02-01",
-      "shopifyProductId": 8234567890125,
-      "imageUrl": null,
-      "imageIsPlaceholder": true
-    }
-  ]
+  "approvedItems": []
 }

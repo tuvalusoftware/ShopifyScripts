@@ -10,7 +10,7 @@ export async function fillSupplierField(page: Page, test: any): Promise<void> {
   console.log('Filling Supplier field...');
 
   // Click the supplier dropdown button
-  await page.getByRole('button', { name: 'Select supplier' }).click();
+  await page.locator('button:has-text("Select supplier")').click();
   await page.waitForTimeout(1000);
 
   // Fill Supplier field by manually clicking the first option in the supplier dropdown

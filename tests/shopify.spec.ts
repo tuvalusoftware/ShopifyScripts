@@ -2,6 +2,7 @@ import { test } from '../fixtures/test';
 import { authenticateShopify } from '../utils/shopify-auth';
 import { goToCreatePoPage } from '../utils/shopify-navigation';
 import { fillPurchaseOrderForm, selectProductsWithAI } from '../utils/fill-purchase-order';
+import mockData from '../mockData.json' with { type: 'json' };
 
 test('shopify automation', async ({ page }) => {
   const aiArgs = { page, test };
@@ -38,15 +39,33 @@ test('shopify automation', async ({ page }) => {
   // Wait for the page to fully load after login
   await page.waitForTimeout(3000);
 
-  // Navigate to Create Purchase Order page
-  await goToCreatePoPage(page);
+  // Get the first 3 orders from mockData
+  const firstThreeOrders = mockData.orders.slice(0, 3);
 
-  // Wait for the form to load
-  await page.waitForTimeout(2000);
+  // Run 3 cycles, each cycle processes 1 order (the first 3 orders)
+  for (let cycle = 1; cycle <= 3; cycle++) {
+    const order = firstThreeOrders[cycle - 1];
+    console.log(`\n=== Starting Cycle ${cycle}: Processing order ${order.orderConfirmationNumber} ===`);
 
-  // Fill in the purchase order form with data from mockData.json
-  await fillPurchaseOrderForm(page, test);
+    // Navigate to Create Purchase Order page
+    await goToCreatePoPage(page);
 
-  // Select products using AI
-  await selectProductsWithAI(page, test);
+    // Wait for the form to load
+    await page.waitForTimeout(2000);
+
+    // Fill in the purchase order form with data from mockData.json
+    await fillPurchaseOrderForm(page, test, order);
+
+    // Select products using AI
+    await selectProductsWithAI(page, test);
+
+    // Click "Save as draft" button
+    await page.locator('button[aria-label="Save as draft"]').click();
+    console.log(`Purchase order ${order.orderConfirmationNumber} saved as draft`);
+
+    // Wait for the page to fully load after saving the purchase order
+    await page.waitForTimeout(5000);
+
+    console.log(`=== Cycle ${cycle} completed ===\n`);
+  }
 });
