@@ -1,65 +1,108 @@
-# Shopify Automation with ZeroStep
+# Shopify Automation
 
-Minimal setup project for using ZeroStep AI with Playwright tests.
+A Shopify automation project using Playwright and ZeroStep AI to automatically fill Purchase Order forms on Shopify Admin.
 
-## Setup
+## System Requirements
 
-1. **Install dependencies:**
-   ```bash
-   npm install
-   ```
+- Node.js (version 18 or higher)
+- npm or yarn
+- Valid Shopify Admin account
 
-2. **Configure ZeroStep token:**
-   
-   Option A - Environment variable:
-   ```bash
-   export ZEROSTEP_TOKEN="<your token here>"
-   ```
-   
-   Option B - Config file:
-   Create a `zerostep.config.json` file in the root:
-   ```json
-   {
-     "TOKEN": "<your token here>"
-   }
-   ```
-   
-   Get your token from [https://app.zerostep.com](https://app.zerostep.com)
+## Installation
 
-3. **Run tests:**
-   ```bash
-   npm test              # Run tests headless
-   npm run test:ui       # Run tests with UI mode
-   npm run test:headed   # Run tests in headed browser
-   ```
+1. Clone the repository:
 
-## Usage
-
-The `ai()` function accepts natural language prompts:
-
-```typescript
-import { test } from '@playwright/test';
-import { ai } from '@zerostep/playwright';
-
-test('example', async ({ page }) => {
-  await page.goto('https://example.com');
-  const aiArgs = { page, test };
-  
-  // Actions
-  await ai('Click the login button', aiArgs);
-  
-  // Queries
-  const text = await ai('Get the page title', aiArgs);
-  
-  // Assertions
-  const hasButton = await ai('Is there a submit button?', aiArgs);
-});
+```bash
+git clone <repository-url>
+cd shopify-automation
 ```
+
+2. Install dependencies:
+
+```bash
+npm install
+```
+
+3. Install Playwright browsers:
+
+```bash
+npx playwright install
+```
+
+## Environment Variables Configuration
+
+The project uses a `.env` file to store environment variables. Create a `.env` file in the project root directory with the following content:
+
+```env
+USERNAME=your-shopify-email@example.com
+PASS=your-shopify-password
+ZEROSTEP_TOKEN=your-zerostep-api-token
+```
+
+### Required Environment Variables:
+
+- **USERNAME**: Your Shopify login email
+- **PASS**: Your Shopify login password
+- **ZEROSTEP_TOKEN**: Your ZeroStep API token for AI-powered automation
+
+### Security Notes:
+
+- **DO NOT** commit the `.env` file to git (this file should be added to `.gitignore`)
+- Keep your login credentials secure
+- Only use test accounts in development environment
+
+## How to Run
+
+### Run specific Shopify test:
+
+```bash
+npm run test:shopify
+```
+
+## Project Structure
+
+```
+shopify-automation/
+├── tests/                    # Test files
+│   └── shopify.spec.ts      # Main test for Shopify automation
+├── utils/                    # Utility functions
+│   ├── shopify-auth.ts      # Authentication handling
+│   ├── shopify-navigation.ts # Navigation helpers
+│   ├── fill-purchase-order.ts # Form filling logic
+│   └── purchase-order-fields/ # Field handlers
+├── fixtures/                 # Playwright fixtures
+│   └── test.ts              # Custom test fixture with AI
+├── mockData.json            # Sample test data
+├── auth-state.json          # Session storage (auto-generated)
+├── playwright.config.ts     # Playwright configuration
+└── package.json             # Dependencies and scripts
+```
+
+## Features
+
+- **Auto login**: Uses credentials from environment variables
+- **Session persistence**: Automatically saves login state to avoid re-authentication
+- **Auto form filling**: Automatically fills Purchase Order form with data from `mockData.json`
+- **AI-powered**: Uses ZeroStep AI to automatically select products
+
+## Troubleshooting
+
+### Error "USERNAME and PASS environment variables must be set"
+
+- Make sure you've created the `.env` file with all required environment variables
+- Check the variable names: `USERNAME` and `PASS` (exactly as shown)
+
+### Test timeout
+
+- Default timeout is 10 minutes (600000ms)
+- If tests timeout, you can increase the value in `playwright.config.ts`
+
+### Browser not installed
+
+- Run: `npx playwright install chromium`
 
 ## Notes
 
-- ZeroStep only supports Chromium browsers
-- Write prompts in complete English sentences
-- Put quotes around exact text: `Click on the "Login" button`
-- Each prompt should contain one distinct action, query, or assertion
-
+- The `auth-state.json` file will be automatically created after the first run to save the session
+- Tests will process the first 3 orders from `mockData.json`
+- Make sure you have access to Shopify Admin before running tests
