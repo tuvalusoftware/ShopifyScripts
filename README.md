@@ -14,7 +14,7 @@ A Shopify automation project using Playwright and ZeroStep AI to automatically f
 
 ```bash
 git clone <repository-url>
-cd shopify-automation
+cd ShopifyScripts
 ```
 
 2. Install dependencies:
