@@ -1,0 +1,15 @@
+{
+  "name": "shopify-automation",
+  "version": "1.0.0",
+  "description": "Minimal ZeroStep Playwright automation project",
+  "type": "module",
+  "scripts": {
+    "test": "playwright test",
+    "test:ui": "playwright test --ui",
+    "test:headed": "playwright test --headed"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.40.0",
+    "@zerostep/playwright": "^0.1.5"
+  }
+}
