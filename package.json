@@ -6,10 +6,14 @@
   "scripts": {
     "test": "playwright test",
     "test:ui": "playwright test --ui",
-    "test:headed": "playwright test --headed"
+    "test:headed": "playwright test --headed",
+    "test:shopify": "playwright test tests/shopify.spec.ts --headed",
+    "test:shopify-ai": "playwright test tests/shopify-ai.spec.ts --headed"
   },
   "devDependencies": {
     "@playwright/test": "^1.40.0",
-    "@zerostep/playwright": "^0.1.5"
+    "@types/node": "^25.0.3",
+    "@zerostep/playwright": "^0.1.5",
+    "dotenv": "^17.2.3"
   }
 }

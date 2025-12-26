@@ -17,4 +17,4 @@
 
 # What we already have in the project (related file)
 
-- tests/shopify.spec.ts (navigate to shopify page)
+- tests/shopify.spec.ts
