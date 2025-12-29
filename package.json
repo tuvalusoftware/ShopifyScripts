@@ -7,7 +7,7 @@
     "test": "playwright test",
     "test:ui": "playwright test --ui",
     "test:headed": "playwright test --headed",
-    "test:shopify": "playwright test tests/shopify.spec.ts",
+    "test:shopify": "playwright test tests/shopify.spec.ts --headed",
     "test:shopify-ai": "playwright test tests/shopify-ai.spec.ts --headed"
   },
   "devDependencies": {

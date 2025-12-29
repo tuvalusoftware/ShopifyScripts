@@ -72,7 +72,7 @@ export async function selectProductsWithAI(page: Page, test: any): Promise<void>
 
   // After selecting product, click Add button to close the popup
   console.log('Adding selected products and closing popup...');
-  await page.locator('button.Polaris-Button--variantPrimary:has-text("Add")').click();
+  await page.locator('.Polaris-InlineStack button:has-text("Add")').click();
 
   await page.waitForTimeout(2000);
   console.log('Products selected successfully');

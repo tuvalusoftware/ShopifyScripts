@@ -1,4 +1,5 @@
 import { Page } from '@playwright/test';
+import { ai } from '@zerostep/playwright';
 
 /**
  * Fills in the Tags field
@@ -22,10 +23,11 @@ export async function fillTagsField(page: Page, test: any, tagValue: string | un
     await tagsInput.fill(tagValue);
     await page.waitForTimeout(500);
 
-    // Wait for the dropdown to appear and find the "Add" option with the tag value
-    const addOption = page.locator(`li[data-listbox-option-value="___ADD__ACTION__"]:has-text("Add"):has-text("${tagValue}")`);
-    await addOption.waitFor({ state: 'visible', timeout: 5000 });
-    await addOption.click();
+    // Use AI to either click "Add" button if tag doesn't exist, or select existing tag
+    await ai(
+      `In the tags dropdown, if there is an "Add" button for "${tagValue}", click it. If "${tagValue}" already exists as a tag option, select it instead.`,
+      { page, test }
+    );
     await page.waitForTimeout(1000);
 
     console.log('Tags field filled successfully');
