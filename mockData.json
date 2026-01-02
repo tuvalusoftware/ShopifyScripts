@@ -13,37 +13,34 @@
       "buyerEmail": "buyer@piperow.com",
       "orderDate": "2025-01-10",
       "headline": "Spring 2025 Collection",
-      "items": []
-    },
-    {
-      "orderTaskId": 102,
-      "orderConfirmationNumber": "PO-2025-0002",
-      "brandName": "STAND STUDIO",
-      "status": "pending",
-      "createdAt": "2025-01-18T14:45:00Z",
-      "shipDate": "2025-02-28",
-      "shopDomain": "pipe-row.myshopify.com",
-      "customerName": "Pipe Row Boutique",
-      "customerEmail": "orders@piperow.com",
-      "buyerEmail": "buyer@piperow.com",
-      "orderDate": "2025-01-16",
-      "headline": "Resort Collection",
-      "items": []
-    },
-    {
-      "orderTaskId": 103,
-      "orderConfirmationNumber": "PO-2025-0003",
-      "brandName": "GANNI",
-      "status": "pending",
-      "createdAt": "2025-01-20T09:15:00Z",
-      "shipDate": "2025-03-10",
-      "shopDomain": "pipe-row.myshopify.com",
-      "customerName": "Pipe Row Boutique",
-      "customerEmail": "orders@piperow.com",
-      "buyerEmail": "buyer@piperow.com",
-      "orderDate": "2025-01-18",
-      "headline": "Summer Essentials",
-      "items": []
+      "items": [
+        {
+          "orderItemId": 1001,
+          "productName": "Classic Leather Tote Bag",
+          "sku": "CLT-001-BLK",
+          "quantity": 25,
+          "price": 289.00,
+          "size": "Large",
+          "color": "Black",
+          "shipDate": "2025-02-15",
+          "approved": true,
+          "imageUrl": null,
+          "imageIsPlaceholder": true
+        },
+        {
+          "orderItemId": 1002,
+          "productName": "Vintage Crossbody Satchel",
+          "sku": "VCS-002-TAN",
+          "quantity": 15,
+          "price": 195.00,
+          "size": "Medium",
+          "color": "Tan Brown",
+          "shipDate": "2025-02-15",
+          "approved": true,
+          "imageUrl": null,
+          "imageIsPlaceholder": true
+        }
+      ]
     }
   ],
   "approvedItems": []

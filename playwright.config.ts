@@ -11,11 +11,12 @@ export default defineConfig({
   retries: process.env.CI ? 2 : 0,
   workers: process.env.CI ? 1 : undefined,
   reporter: 'html',
-  timeout: 600000, // Increased timeout to 10 minutes per test
+  timeout: 600000, // 10 minutes per test
   use: {
+    headless: false,
     trace: 'on-first-retry',
-    actionTimeout: 30000, // Increased action timeout to 30 seconds
-    navigationTimeout: 60000, // Increased navigation timeout to 1 minute
+    actionTimeout: 30000,
+    navigationTimeout: 60000,
   },
   projects: [
     {
