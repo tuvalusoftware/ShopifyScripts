@@ -18,9 +18,9 @@ else
     echo "Warning: /app/crontab not found. Cron jobs will not be scheduled."
 fi
 
-# Run immediately on container start
+# Run immediately on container start (don't exit container if it fails)
 echo "Running email collection on startup..."
-/app/run_email_and_upload.sh >> /var/log/cron.log 2>&1
+/app/run_email_and_upload.sh >> /var/log/cron.log 2>&1 || echo "Warning: Initial run failed, but continuing to start cron..."
 
 # Start cron daemon
 echo "Starting cron daemon..."
