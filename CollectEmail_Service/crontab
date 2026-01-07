@@ -1,0 +1,5 @@
+# Run email collection every 2 hours
+0 */2 * * * root /app/run_email_and_upload.sh >> /var/log/cron.log 2>&1
+
+# Empty line required at end of crontab file
+

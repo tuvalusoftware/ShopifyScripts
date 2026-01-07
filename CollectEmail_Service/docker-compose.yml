@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  email-collector:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: email-collector
+    restart: unless-stopped
+    
+    environment:
+      # Gmail credentials (required)
+      - GMAIL_EMAIL=${GMAIL_EMAIL}
+      - GMAIL_APP_PASSWORD=${GMAIL_APP_PASSWORD}
+      
+      # AWS configuration (using IAM role - no credentials needed)
+      - AWS_REGION=${AWS_REGION:-ap-southeast-1}
+      - S3_BUCKET=${S3_BUCKET:-pipe-and-ro-email}
+      - S3_PREFIX=${S3_PREFIX:-exports}
+    
+    volumes:
+      # Persistent logs directory
+      - ./logs:/app/logs
+      
+      # Optional: Uncomment to persist data locally
+      # - ./data:/app/data
+    
+    # Health check configuration
+    healthcheck:
+      test: ["CMD", "pgrep", "cron"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+
