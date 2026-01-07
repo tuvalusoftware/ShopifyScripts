@@ -1,6 +1,13 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Load environment variables if cron-env file exists (for cron jobs)
+if [ -f /app/cron-env ]; then
+    set -a
+    source /app/cron-env
+    set +a
+fi
+
 # Docker environment paths
 SCRIPT_DIR="/app"
 PYTHON="/usr/local/bin/python3"

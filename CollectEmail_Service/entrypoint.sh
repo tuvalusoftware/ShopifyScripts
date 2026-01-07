@@ -3,6 +3,10 @@ set -e
 
 echo "Starting email collector container..."
 
+# Export environment variables to a file for cron to use
+echo "Exporting environment variables for cron..."
+env | grep -E '^(GMAIL_|AWS_|S3_|OUTPUT_DIR=)' > /app/cron-env || true
+
 # Apply crontab from mounted volume
 if [ -f /app/crontab ]; then
     echo "Applying crontab from mounted file..."
