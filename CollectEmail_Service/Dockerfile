@@ -19,14 +19,7 @@ COPY gmail.py .
 COPY run_email_and_upload.sh .
 RUN chmod +x run_email_and_upload.sh
 
-# Copy crontab file
-COPY crontab /etc/cron.d/email-collector-cron
-
-# Give execution rights on the cron job
-RUN chmod 0644 /etc/cron.d/email-collector-cron
-
-# Apply cron job
-RUN crontab /etc/cron.d/email-collector-cron
+# Crontab will be mounted as volume and applied at runtime via entrypoint
 
 # Create log directory
 RUN mkdir -p /app/logs

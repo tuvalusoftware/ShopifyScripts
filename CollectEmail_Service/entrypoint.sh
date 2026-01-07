@@ -3,6 +3,17 @@ set -e
 
 echo "Starting email collector container..."
 
+# Apply crontab from mounted volume
+if [ -f /app/crontab ]; then
+    echo "Applying crontab from mounted file..."
+    cp /app/crontab /etc/cron.d/email-collector-cron
+    chmod 0644 /etc/cron.d/email-collector-cron
+    crontab /etc/cron.d/email-collector-cron
+    echo "Crontab applied successfully"
+else
+    echo "Warning: /app/crontab not found. Cron jobs will not be scheduled."
+fi
+
 # Run immediately on container start
 echo "Running email collection on startup..."
 /app/run_email_and_upload.sh >> /var/log/cron.log 2>&1
