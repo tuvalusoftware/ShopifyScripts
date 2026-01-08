@@ -24,8 +24,11 @@ services:
       # Persistent temp directory for order files
       - ./temp:/app/temp
 
+      # Persistent screenshots directory
+      - ./screenshots:/app/screenshots
+
       # Optional: Mount auth state for persistent login
-      - ./auth-state.json:/app/auth-state.json
+      # - ./auth-state.json:/app/auth-state.json
 
     # Health check configuration
     healthcheck:
@@ -34,3 +37,5 @@ services:
       timeout: 10s
       retries: 3
       start_period: 5s
+
+  # exec command: docker exec -it create-po-service /bin/bash

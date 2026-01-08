@@ -26,6 +26,8 @@ test('shopify automation', async ({ page, context }) => {
   // Check if already logged in by navigating to Shopify admin
   await page.goto('https://admin.shopify.com', { waitUntil: 'domcontentloaded' });
   await page.waitForTimeout(5000);
+  await page.screenshot({ path: 'screenshots/01-initial-navigation.png', fullPage: true });
+  console.log('Screenshot taken: Initial navigation to Shopify admin');
 
   // Check current URL to determine login state
   const currentUrl = page.url();
@@ -42,6 +44,8 @@ test('shopify automation', async ({ page, context }) => {
 
   if (needsLogin) {
     console.log('Not logged in, starting authentication...');
+    await page.screenshot({ path: 'screenshots/02-login-page-detected.png', fullPage: true });
+    console.log('Screenshot taken: Login page detected');
     
     // Use environment variables for username and password
     const username = process.env.SHOPIFY_USERNAME;
@@ -54,22 +58,30 @@ test('shopify automation', async ({ page, context }) => {
     // Authenticate with Shopify
     await authenticateShopify(page, username, password);
     console.log('Shopify authentication completed');
+    await page.screenshot({ path: 'screenshots/03-after-authentication.png', fullPage: true });
+    console.log('Screenshot taken: After authentication');
     
     // Navigate back to admin after login
     await page.goto('https://admin.shopify.com', { waitUntil: 'domcontentloaded' });
     await page.waitForTimeout(5000);
+    await page.screenshot({ path: 'screenshots/04-admin-after-login.png', fullPage: true });
+    console.log('Screenshot taken: Admin page after login');
     
     // Save the new session state immediately after login
     await context.storageState({ path: 'playwright/auth-state.json' });
     console.log('Session state saved after login');
   } else {
     console.log('Already logged in via cookies, skipping authentication');
+    await page.screenshot({ path: 'screenshots/02-already-logged-in.png', fullPage: true });
+    console.log('Screenshot taken: Already logged in');
   }
 
   console.log('Shopify page loaded');
 
   // Wait for the page to fully load after login
   await page.waitForTimeout(3000);
+  await page.screenshot({ path: 'screenshots/05-page-fully-loaded.png', fullPage: true });
+  console.log('Screenshot taken: Page fully loaded');
 
   // Get order data (from temp file or mockData)
   const order = getOrderData();
