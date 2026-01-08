@@ -13,7 +13,26 @@
       "buyerEmail": "buyer@piperow.com",
       "orderDate": "2025-01-10",
       "headline": "Spring 2025 Collection",
-      "items": []
+      "items": [
+        {
+          "orderItemId": 1001,
+          "productName": "AYLA BAGGY IN VOILA (ORGANIC COTTON)",
+          "sku": "AYLA-VOILA-001",
+          "quantity": 2
+        },
+        {
+          "orderItemId": 1002,
+          "productName": "voila (washed black) / 22 - 33",
+          "sku": "AYLA-VOILA-WB-22-33",
+          "quantity": 1
+        },
+        {
+          "orderItemId": 1003,
+          "productName": "AYLA BAGGY IN VOILA (ORGANIC COTTON)",
+          "sku": "AYLA-VOILA-002",
+          "quantity": 1
+        }
+      ]
     },
     {
       "orderTaskId": 102,
@@ -28,7 +47,20 @@
       "buyerEmail": "buyer@piperow.com",
       "orderDate": "2025-01-16",
       "headline": "Resort Collection",
-      "items": []
+      "items": [
+        {
+          "orderItemId": 2001,
+          "productName": "Classic Leather Tote Bag",
+          "sku": "CLT-BAG-001",
+          "quantity": 25
+        },
+        {
+          "orderItemId": 2002,
+          "productName": "AYLA BAGGY IN VOILA (ORGANIC COTTON)",
+          "sku": "AYLA-VOILA-003",
+          "quantity": 1
+        }
+      ]
     },
     {
       "orderTaskId": 103,
@@ -43,7 +75,44 @@
       "buyerEmail": "buyer@piperow.com",
       "orderDate": "2025-01-18",
       "headline": "Summer Essentials",
-      "items": []
+      "items": [
+        {
+          "orderItemId": 3001,
+          "productName": "DREW JEANS",
+          "sku": "DREW-JEANS-001",
+          "quantity": 3
+        },
+        {
+          "orderItemId": 3002,
+          "productName": "BURGUNDY / 6, 8, 10, 12, 14, 16, 18, 20",
+          "sku": "DREW-BURGUNDY-SET",
+          "quantity": 0
+        },
+        {
+          "orderItemId": 3003,
+          "productName": "DREW JEANS",
+          "sku": "DREW-JEANS-002",
+          "quantity": 2
+        },
+        {
+          "orderItemId": 3004,
+          "productName": "DUSTY / 6, 8, 10, 12, 14, 16, 18, 20",
+          "sku": "DREW-DUSTY-SET",
+          "quantity": 0
+        },
+        {
+          "orderItemId": 3005,
+          "productName": "DREW JEANS",
+          "sku": "DREW-JEANS-003",
+          "quantity": 1
+        },
+        {
+          "orderItemId": 3006,
+          "productName": "CAMO / 6 8 10 12 14 16 18 20",
+          "sku": "DREW-CAMO-SET",
+          "quantity": 5
+        }
+      ]
     }
   ],
   "approvedItems": []

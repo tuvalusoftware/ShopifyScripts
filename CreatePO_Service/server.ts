@@ -2,6 +2,7 @@ import express from 'express';
 import { writeFileSync, mkdirSync, existsSync, unlinkSync } from 'fs';
 import { execSync } from 'child_process';
 import { join } from 'path';
+import { z } from 'zod';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -15,6 +16,30 @@ if (!existsSync(TEMP_DIR)) {
 // Middleware
 app.use(express.json());
 
+// Zod schema for order validation
+const OrderItemSchema = z.object({
+  orderItemId: z.number().optional(),
+  productName: z.string().optional(),
+  sku: z.string().optional(),
+  quantity: z.number().optional(),
+});
+
+const OrderSchema = z.object({
+  orderTaskId: z.number().optional(),
+  orderConfirmationNumber: z.string().min(1, 'orderConfirmationNumber is required'),
+  brandName: z.string().min(1, 'brandName is required'),
+  status: z.string().optional(),
+  createdAt: z.string().optional(),
+  shipDate: z.string().optional(),
+  shopDomain: z.string().optional(),
+  customerName: z.string().optional(),
+  customerEmail: z.string().email().optional().or(z.literal('')),
+  buyerEmail: z.string().email().optional().or(z.literal('')),
+  orderDate: z.string().optional(),
+  headline: z.string().optional(),
+  items: z.array(OrderItemSchema).optional().default([]),
+});
+
 // Health check endpoint
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
@@ -25,26 +50,23 @@ app.post('/api/process-order', async (req, res) => {
   let filePath: string | null = null;
 
   try {
-    // Validate request body
-    const order = req.body;
+    // Validate request body with Zod schema
+    const validationResult = OrderSchema.safeParse(req.body);
 
-    if (!order || typeof order !== 'object') {
+    if (!validationResult.success) {
+      const errors = validationResult.error.issues.map((err) => ({
+        field: err.path.join('.'),
+        message: err.message,
+      }));
+
       return res.status(400).json({
         success: false,
-        error: 'Invalid request body: expected JSON object',
+        error: 'Validation failed',
+        details: errors,
       });
     }
 
-    // Validate required fields based on mockData structure
-    const requiredFields = ['orderConfirmationNumber', 'brandName'];
-    const missingFields = requiredFields.filter((field) => !order[field]);
-
-    if (missingFields.length > 0) {
-      return res.status(400).json({
-        success: false,
-        error: `Missing required fields: ${missingFields.join(', ')}`,
-      });
-    }
+    const order = validationResult.data;
 
     // Generate unique temp file path
     const timestamp = Date.now();

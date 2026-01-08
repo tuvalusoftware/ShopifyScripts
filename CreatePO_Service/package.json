@@ -13,7 +13,8 @@
     "server": "tsx server.ts"
   },
   "dependencies": {
-    "express": "^4.18.2"
+    "express": "^4.18.2",
+    "zod": "^4.3.5"
   },
   "devDependencies": {
     "@playwright/test": "^1.40.0",
