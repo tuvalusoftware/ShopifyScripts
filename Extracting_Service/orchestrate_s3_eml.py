@@ -92,6 +92,12 @@ def call_extract_products_script(
         print(f"ERROR: Extraction script not found: {script_path}")
         return False
     
+    # Resolve prompt file path: if relative, resolve relative to script directory
+    if not os.path.isabs(prompt_file):
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        prompt_file = os.path.join(script_dir, prompt_file)
+        prompt_file = os.path.normpath(prompt_file)
+    
     if not os.path.exists(prompt_file):
         print(f"ERROR: Prompt file not found: {prompt_file}")
         return False

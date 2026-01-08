@@ -8,6 +8,9 @@ if [ -f /app/cron-env ]; then
     set +a
 fi
 
+# Set working directory to /app to ensure relative paths work correctly
+cd /app || exit 1
+
 # Docker environment paths
 SCRIPT_DIR="/app"
 PYTHON="/usr/local/bin/python3"
