@@ -17,6 +17,11 @@ services:
       - SHOPIFY_PASS=${SHOPIFY_PASS}
       - ZEROSTEP_TOKEN=${ZEROSTEP_TOKEN}
 
+      # Proxy configuration (optional)
+      - PROXY_SERVER=${PROXY_SERVER:-}
+      - PROXY_USERNAME=${PROXY_USERNAME:-}
+      - PROXY_PASSWORD=${PROXY_PASSWORD:-}
+
     ports:
       - '${PORT:-3000}:3000'
 

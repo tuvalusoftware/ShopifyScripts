@@ -16,6 +16,15 @@ export default defineConfig({
     trace: 'on-first-retry',
     actionTimeout: 30000, // Increased action timeout to 30 seconds
     navigationTimeout: 60000, // Increased navigation timeout to 1 minute
+    // Use headless: 'new' instead of classic headless mode to avoid detection
+    headless: process.env.HEADLESS !== 'false' ? 'new' : false,
+    ...(process.env.PROXY_SERVER && {
+      proxy: {
+        server: process.env.PROXY_SERVER,
+        ...(process.env.PROXY_USERNAME && { username: process.env.PROXY_USERNAME }),
+        ...(process.env.PROXY_PASSWORD && { password: process.env.PROXY_PASSWORD }),
+      },
+    }),
   },
   projects: [
     {
