@@ -1,5 +1,4 @@
 import { Page } from '@playwright/test';
-import { ai } from '@zerostep/playwright';
 
 /**
  * Fills in the Supplier field by selecting the first available option

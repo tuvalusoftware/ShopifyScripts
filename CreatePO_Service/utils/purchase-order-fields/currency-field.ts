@@ -14,16 +14,15 @@ export async function fillCurrencyField(
   currency?: string
 ): Promise<void> {
   console.log('Filling Supplier currency field...');
-  
+
   const aiArgs = { page, test };
   const currencyValue = currency || 'Vietnamese Dong (VND ₫)';
-  
+
   await ai(
     `Set the "Supplier currency" dropdown to "${currencyValue}" or the appropriate currency option.`,
     aiArgs
   );
   await page.waitForTimeout(1000);
-  
+
   console.log('Supplier currency field filled successfully');
 }
-

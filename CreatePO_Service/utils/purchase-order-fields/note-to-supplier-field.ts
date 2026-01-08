@@ -24,14 +24,13 @@ export async function fillNoteToSupplierField(
     : `Order: ${orderConfirmationNumber}`;
 
   console.log(`Filling Note to supplier field with order: ${orderConfirmationNumber}`);
-  
+
   const aiArgs = { page, test };
   await ai(
     `Fill in the "Note to supplier" text area with the following text: "${noteToSupplier}". Make sure to stay within the character limit.`,
     aiArgs
   );
   await page.waitForTimeout(1000);
-  
+
   console.log('Note to supplier field filled successfully');
 }
-

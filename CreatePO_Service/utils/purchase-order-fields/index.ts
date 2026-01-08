@@ -8,4 +8,3 @@ export { fillEstimatedArrivalField } from './estimated-arrival-field';
 export { fillReferenceNumberField } from './reference-number-field';
 export { fillNoteToSupplierField } from './note-to-supplier-field';
 export { fillTagsField } from './tags-field';
-

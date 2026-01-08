@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  create-po-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: create-po-service
+    restart: unless-stopped
+
+    environment:
+      # Server configuration
+      - PORT=${PORT:-3000}
+
+      # Shopify credentials (required)
+      - SHOPIFY_USERNAME=${SHOPIFY_USERNAME}
+      - SHOPIFY_PASS=${SHOPIFY_PASS}
+      - ZEROSTEP_TOKEN=${ZEROSTEP_TOKEN}
+
+    ports:
+      - '${PORT:-3000}:3000'
+
+    volumes:
+      # Persistent temp directory for order files
+      - ./temp:/app/temp
+
+      # Optional: Mount auth state for persistent login
+      - ./auth-state.json:/app/auth-state.json
+
+    # Health check configuration
+    healthcheck:
+      test: ['CMD', 'node', '-e', "require('http').get('http://localhost:3000/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s

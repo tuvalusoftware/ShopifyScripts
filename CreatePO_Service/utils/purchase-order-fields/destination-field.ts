@@ -18,14 +18,13 @@ export async function fillDestinationField(
   }
 
   console.log(`Filling Destination field with: ${destination}`);
-  
+
   const aiArgs = { page, test };
   await ai(
     `Fill in the "Destination" dropdown field with the value "${destination}". If the exact value is not available, select the closest matching option.`,
     aiArgs
   );
   await page.waitForTimeout(1000);
-  
+
   console.log('Destination field filled successfully');
 }
-
