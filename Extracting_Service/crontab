@@ -1,0 +1,5 @@
+# Run S3 EML processing every 5 minutes
+*/5 * * * * /app/run_s3_eml_processing.sh >> /var/log/cron.log 2>&1
+
+# Empty line required at end of crontab file
+

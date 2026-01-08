@@ -230,6 +230,9 @@ def main():
     msg_ids = data[0].split()
     print(f"Found {len(msg_ids)} unread messages")
 
+    # Generate timestamp for this batch to ensure unique filenames
+    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+
     records: List[Dict[str, Any]] = []
     ensure_dir(attachments_dir)
     ensure_dir(raw_emails_dir)
@@ -244,7 +247,7 @@ def main():
         raw = msg_data[0][1]
         msg = message_from_bytes(raw)
         
-        prefix = f"msg{i:04d}"
+        prefix = f"msg{timestamp}_{i:04d}"
         raw_email_path = os.path.join(raw_emails_dir, f"{prefix}.eml")
         try:
             with open(raw_email_path, "wb") as f:

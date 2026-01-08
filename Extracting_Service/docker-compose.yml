@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  s3-eml-processor:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: s3-eml-processor
+    restart: unless-stopped
+
+    environment:
+      # AWS configuration (using IAM role or credentials)
+      - AWS_REGION=${AWS_REGION:-ap-southeast-1}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-}
+      - S3_BUCKET=${S3_BUCKET:-pipe-and-ro-email}
+      - S3_PREFIX=${S3_PREFIX:-exports/raw_emails}
+      - OUTPUT_DIR=${OUTPUT_DIR:-/app/data}
+
+      # OpenAI configuration
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+
+      # DynamoDB Service API configuration
+      - DYNAMO_SERVICE_API_URL=${DYNAMO_SERVICE_API_URL:-}
+
+      # Extraction configuration
+      - ENABLE_EXTRACTION=${ENABLE_EXTRACTION:-}
+      - EXTRACTION_PROMPT_FILE=${EXTRACTION_PROMPT_FILE:-}
+      - MAX_BYTES=${MAX_BYTES:-}
+      - DELETE_AFTER_PROCESS=${DELETE_AFTER_PROCESS:-}
+
+    volumes:
+      # Persistent logs directory
+      - ./logs:/app/logs
+
+      # Crontab file (editable on server)
+      - ./crontab:/app/crontab:ro
+
+      # Optional: Uncomment to persist data locally
+      - ./data:/app/data
+
+    # Health check configuration
+    healthcheck:
+      test: ['CMD', 'pgrep', 'cron']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
