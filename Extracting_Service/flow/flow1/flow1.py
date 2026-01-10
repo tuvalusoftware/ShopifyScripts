@@ -263,6 +263,7 @@ def main():
                 dir_manager=dir_manager,
                 prompt_file=extraction_prompt_file,
                 extraction_out_dir=extraction_out_dir,
+                records=results.records,  # Pass records for sender mapping
             )
             
             if not results.step6["success"]:

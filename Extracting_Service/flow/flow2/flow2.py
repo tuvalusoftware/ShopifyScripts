@@ -127,6 +127,7 @@ def main() -> int:
     ap.add_argument("--no_run_subdir", action="store_true", help="Write outputs directly into --out_dir (no run_*)")
     ap.add_argument("--response_ext", default=".txt", help="Per-file response file extension (.txt/.md/.json)")
     ap.add_argument("--upload_purpose", default="assistants", help="OpenAI file upload purpose (default: assistants)")
+    ap.add_argument("--sender_mapping_file", default=None, help="Path to sender mapping JSON file (maps prefix to sender_email and sender_name)")
     
     args = ap.parse_args()
     
@@ -195,23 +196,19 @@ def main() -> int:
         eprint(f"\n[{i}/{len(files)}] Processing: {file_name} ({file_size_bytes} bytes)")
         
         step3_result = step3_process_file(
-            dir_manager=dir_manager,
             openai_client=results.openai_client,
             file_path=file_path,
-            file_name=file_name,
-            file_size_bytes=file_size_bytes,
             prompt=results.prompt,
             model=args.model,
             max_output_tokens=args.max_output_tokens,
-            response_ext=args.response_ext,
             upload_purpose=args.upload_purpose,
+            sender_mapping_file=args.sender_mapping_file,
         )
         results.step3.append(step3_result)
         
         if step3_result["success"]:
             file_result = step3_result["file_result"]
             eprint(f"  ✓ Uploaded: {file_result.get('uploaded_file_id', 'N/A')}")
-            eprint(f"  ✓ Response written: {file_result.get('response_path', 'N/A')}")
             if file_result.get("products_extracted", 0) > 0:
                 eprint(f"  ✓ Products extracted: {file_result.get('products_extracted')}")
             results.file_results.append(file_result)

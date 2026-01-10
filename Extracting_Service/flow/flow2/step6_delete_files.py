@@ -10,12 +10,12 @@ def execute(
     step4_status: str,
 ) -> Dict[str, Any]:
     """
-    Delete processed files if deletion is enabled and step4 was successful.
+    Delete processed files if deletion is enabled and extraction was successful.
     
     Args:
         file_results: List of file result dictionaries from step3/step4
         delete_enabled: Whether file deletion is enabled (from DELETE_FILE_AFTER_PROCESS env var)
-        step4_status: Status from step4 ("ok", "skipped", "error")
+        step4_status: Status from step4 ("ok", "skipped", "error") - kept for compatibility but not used
         
     Returns:
         Dict with 'success' bool and deletion results or 'error' message
@@ -40,18 +40,10 @@ def execute(
                 "step_result": step_result,
             }
         
-        if step4_status != "ok":
-            step_result["status"] = "skipped"
-            step_result["error"] = f"Step 4 status is '{step4_status}', skipping file deletion"
-            return {
-                "success": True,
-                "step_result": step_result,
-            }
-        
-        # Delete files that had products created successfully
+        # Delete files that were successfully extracted (step3 status = "ok")
         for file_result in file_results:
-            # Only delete files that had products created successfully
-            if file_result.get("products_created_success", 0) > 0:
+            # Delete files that were successfully extracted, regardless of step4 status
+            if file_result.get("status") == "ok":
                 file_path = file_result.get("input_path")
                 file_name = file_result.get("input_name", file_path)
                 
