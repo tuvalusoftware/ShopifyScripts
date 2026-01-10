@@ -14,10 +14,11 @@ echo "Exporting environment variables for cron..."
     [ -n "${OUTPUT_DIR:-}" ] && printf "export OUTPUT_DIR=%q\n" "$OUTPUT_DIR"
     [ -n "${OPENAI_API_KEY:-}" ] && printf "export OPENAI_API_KEY=%q\n" "$OPENAI_API_KEY"
     [ -n "${DYNAMO_SERVICE_API_URL:-}" ] && printf "export DYNAMO_SERVICE_API_URL=%q\n" "$DYNAMO_SERVICE_API_URL"
-    [ -n "${DELETE_AFTER_PROCESS:-}" ] && printf "export DELETE_AFTER_PROCESS=%q\n" "$DELETE_AFTER_PROCESS"
+    [ -n "${DELETE_EML_AFTER_PROCESS:-}" ] && printf "export DELETE_EML_AFTER_PROCESS=%q\n" "$DELETE_EML_AFTER_PROCESS"
     [ -n "${ENABLE_EXTRACTION:-}" ] && printf "export ENABLE_EXTRACTION=%q\n" "$ENABLE_EXTRACTION"
     [ -n "${EXTRACTION_PROMPT_FILE:-}" ] && printf "export EXTRACTION_PROMPT_FILE=%q\n" "$EXTRACTION_PROMPT_FILE"
     [ -n "${MAX_BYTES:-}" ] && printf "export MAX_BYTES=%q\n" "$MAX_BYTES"
+    [ -n "${DELETE_FILE_AFTER_PROCESS:-}" ] && printf "export DELETE_FILE_AFTER_PROCESS=%q\n" "$DELETE_FILE_AFTER_PROCESS"
 } > /app/cron-env
 
 # Apply crontab from mounted volume

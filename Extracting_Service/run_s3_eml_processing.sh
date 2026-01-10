@@ -14,7 +14,7 @@ cd /app || exit 1
 # Docker environment paths
 SCRIPT_DIR="/app"
 PYTHON="/usr/local/bin/python3"
-SCRIPT="$SCRIPT_DIR/orchestrate_s3_eml.py"
+SCRIPT="$SCRIPT_DIR/flow/flow1/flow1.py"
 OUTPUT_DIR="${OUTPUT_DIR:-/app/data}"
 LOG_DIR="/app/logs"
 
@@ -34,22 +34,22 @@ mkdir -p "$LOG_DIR"
 mkdir -p "$OUTPUT_DIR"
 
 TS="$(date +'%Y%m%d_%H%M%S')"
-LOG_FILE="$LOG_DIR/s3_eml_processing_${TS}.log"
+LOG_FILE="$LOG_DIR/flow1_${TS}.log"
 
 {
-  echo "=== Run started: $(date) ==="
+  echo "=== Flow1 started: $(date) ==="
   echo "Python: $PYTHON"
   echo "Script: $SCRIPT"
   echo "Output directory: $OUTPUT_DIR"
   echo "Bucket: s3://$BUCKET/$S3_PREFIX/"
   echo "AWS Region: $AWS_REGION"
 
-  # Run S3 EML processing script
+  # Run flow1
   if ! "$PYTHON" "$SCRIPT"; then
-    echo "ERROR: S3 EML processing script failed with exit code $?"
+    echo "ERROR: Flow1 failed with exit code $?"
     exit 1
   fi
 
-  echo "=== Run finished: $(date) ==="
+  echo "=== Flow1 finished: $(date) ==="
 } >> "$LOG_FILE" 2>&1
 

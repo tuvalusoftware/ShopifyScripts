@@ -151,7 +151,8 @@ def parse_eml_file(eml_path: str, attachments_dir: str, prefix: str, save_atts: 
     subject = decode_mime_words(msg.get("Subject"))
     date_hdr = decode_mime_words(msg.get("Date"))
 
-    _, sender_email = parseaddr(from_raw)
+    sender_name, sender_email = parseaddr(from_raw)
+    sender_name = (sender_name or "").strip()
     sender_email = (sender_email or "").strip()
 
     body_text, body_kind = extract_best_body(msg)
@@ -164,6 +165,7 @@ def parse_eml_file(eml_path: str, attachments_dir: str, prefix: str, save_atts: 
         "eml_path": eml_path,
         "from_raw": from_raw,
         "sender_email": sender_email,
+        "sender_name": sender_name,
         "subject": subject,
         "date": date_hdr,
         "body_kind": body_kind,
