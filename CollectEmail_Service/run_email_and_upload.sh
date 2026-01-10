@@ -61,6 +61,17 @@ LOG_FILE="$LOG_DIR/cron_${TS}.log"
     echo "WARNING: raw_emails/ directory not found"
   fi
 
+  # 3) Clean up local files after successful sync
+  if [ -f "$OUTPUT_DIR/emails.json" ]; then
+    rm -f "$OUTPUT_DIR/emails.json"
+    echo "Deleted local emails.json"
+  fi
+
+  if [ -d "$OUTPUT_DIR/raw_emails" ]; then
+    rm -rf "$OUTPUT_DIR/raw_emails"
+    echo "Deleted local raw_emails/ directory"
+  fi
+
   # Note: Attachments remain local only (not synced to S3 per plan)
 
   echo "=== Run finished: $(date) ==="
