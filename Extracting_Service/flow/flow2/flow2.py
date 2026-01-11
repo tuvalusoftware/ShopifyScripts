@@ -6,12 +6,12 @@ import sys
 import time
 from typing import Any, Dict, List, Optional
 
-# Add parent directory to path
+# Setup paths for imports
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../.."))
+import _path_setup  # noqa: F401
 
-# Import directory manager
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from utils.directory_manager import DirectoryManager
+from utils.logger import get_logger
 
 # Import steps
 from step1_init import execute as step1_init
@@ -25,10 +25,8 @@ from step6_delete_files import execute as step6_delete_files
 DEFAULT_MODEL = "gpt-4.1-mini"
 DEFAULT_MAX_OUTPUT_TOKENS = 20000
 
-
-def eprint(*args, **kwargs) -> None:
-    """Print to stderr."""
-    print(*args, file=sys.stderr, **kwargs)
+# Setup logger
+logger = get_logger(__name__)
 
 
 def utc_now_iso() -> str:
@@ -134,8 +132,8 @@ def main() -> int:
     # Parse DELETE_FILE_AFTER_PROCESS env var (default: False to prevent accidental deletion)
     DELETE_FILE_AFTER_PROCESS = os.getenv("DELETE_FILE_AFTER_PROCESS", "false").lower() in ("true", "1", "yes")
     
-    # Initialize directory manager
-    dir_manager = DirectoryManager(args.out_dir)
+    # Initialize directory manager (reads OUTPUT_DIR from environment variable)
+    dir_manager = DirectoryManager.get_instance()
     if not args.no_run_subdir:
         dir_manager.setup_flow2_directories(make_run_subdir=True)
     else:
@@ -148,26 +146,26 @@ def main() -> int:
     run_started_iso = utc_now_iso()
     
     # Step 1: Initialize
-    eprint(f"\n=== Step 1: Initialize ===")
+    logger.info(f"\n=== Step 1: Initialize ===")
     results.step1 = step1_init(
         dir_manager=dir_manager,
         prompt_file=args.prompt_file,
     )
     if not results.step1["success"]:
-        eprint(f"ERROR initializing: {results.step1.get('error')}")
+        logger.error(f"ERROR initializing: {results.step1.get('error')}")
         return 2
-    eprint(f"✓ OpenAI client initialized")
+    logger.info(f"✓ OpenAI client initialized")
     if results.dynamo_client:
-        eprint(f"✓ DynamoServiceClient initialized")
+        logger.info(f"✓ DynamoServiceClient initialized")
     else:
-        eprint(f"⚠ DynamoServiceClient not available (products will be extracted but not created)")
-    eprint(f"✓ Prompt loaded from: {results.step1.get('prompt_path')}")
-    eprint(f"✓ Run directory: {dir_manager.get_run_dir()}")
-    eprint(f"Delete After Process: {DELETE_FILE_AFTER_PROCESS}")
+        logger.warning(f"⚠ DynamoServiceClient not available (products will be extracted but not created)")
+    logger.info(f"✓ Prompt loaded from: {results.step1.get('prompt_path')}")
+    logger.info(f"✓ Run directory: {dir_manager.get_run_dir()}")
+    logger.info(f"Delete After Process: {DELETE_FILE_AFTER_PROCESS}")
     
     # Step 2: Collect files
-    eprint(f"\n=== Step 2: Collect Files ===")
-    eprint(f"Scanning directory: {args.attachment_dir}")
+    logger.info(f"\n=== Step 2: Collect Files ===")
+    logger.info(f"Scanning directory: {args.attachment_dir}")
     results.step2 = step2_collect_files(
         input_dir=args.attachment_dir,
         exts=args.ext,
@@ -176,24 +174,24 @@ def main() -> int:
         max_bytes=args.max_bytes,
     )
     if not results.step2["success"]:
-        eprint(f"ERROR collecting files: {results.step2.get('error')}")
+        logger.error(f"ERROR collecting files: {results.step2.get('error')}")
         return 2
     
     files = results.files
     if not files:
-        eprint("No files found to process.")
+        logger.info("No files found to process.")
         return 0
     
-    eprint(f"Found {results.step2.get('total_found')} file(s), collecting {len(files)} file(s)")
+    logger.info(f"Found {results.step2.get('total_found')} file(s), collecting {len(files)} file(s)")
     
     # Step 3: Process each file
-    eprint(f"\n=== Step 3: Process Files ===")
+    logger.info(f"\n=== Step 3: Process Files ===")
     for i, file_info in enumerate(files, start=1):
         file_path = file_info["path"]
         file_name = file_info["name"]
         file_size_bytes = file_info["size_bytes"]
         
-        eprint(f"\n[{i}/{len(files)}] Processing: {file_name} ({file_size_bytes} bytes)")
+        logger.info(f"\n[{i}/{len(files)}] Processing: {file_name} ({file_size_bytes} bytes)")
         
         step3_result = step3_process_file(
             openai_client=results.openai_client,
@@ -208,13 +206,13 @@ def main() -> int:
         
         if step3_result["success"]:
             file_result = step3_result["file_result"]
-            eprint(f"  ✓ Uploaded: {file_result.get('uploaded_file_id', 'N/A')}")
+            logger.info(f"  ✓ Uploaded: {file_result.get('uploaded_file_id', 'N/A')}")
             if file_result.get("products_extracted", 0) > 0:
-                eprint(f"  ✓ Products extracted: {file_result.get('products_extracted')}")
+                logger.info(f"  ✓ Products extracted: {file_result.get('products_extracted')}")
             results.file_results.append(file_result)
         else:
             file_result = step3_result.get("file_result", {})
-            eprint(f"  ✗ Error: {file_result.get('error', 'Unknown error')}")
+            logger.error(f"  ✗ Error: {file_result.get('error', 'Unknown error')}")
             results.file_results.append(file_result)
     
     # Aggregate statistics
@@ -225,22 +223,22 @@ def main() -> int:
     total_products_extracted = sum(r.get("products_extracted", 0) for r in results.file_results)
     
     # Step 4: Create products via Dynamo
-    eprint(f"\n=== Step 4: Create Products ===")
+    logger.info(f"\n=== Step 4: Create Products ===")
     results.step4 = step4_create_products(
         dynamo_client=results.dynamo_client,
         file_results=results.file_results, 
     )
     
     if not results.step4["success"]:
-        eprint(f"ERROR creating products: {results.step4.get('error')}")
+        logger.error(f"ERROR creating products: {results.step4.get('error')}")
         return 1
     
     step4_result = results.step4.get("step_result", {})
     if step4_result.get("status") == "skipped":
-        eprint(f"⚠ DynamoServiceClient not available (products will be extracted but not created)")
+        logger.warning(f"⚠ DynamoServiceClient not available (products will be extracted but not created)")
     else:
-        eprint(f"✓ Products processed: {step4_result.get('total_products_processed', 0)}")
-        eprint(f"✓ Products created: {step4_result.get('total_products_created_success', 0)} success, {step4_result.get('total_products_created_error', 0)} errors")
+        logger.info(f"✓ Products processed: {step4_result.get('total_products_processed', 0)}")
+        logger.info(f"✓ Products created: {step4_result.get('total_products_created_success', 0)} success, {step4_result.get('total_products_created_error', 0)} errors")
     
     # Update file_results with step4 results
     results.file_results = step4_result.get("file_results_updated", results.file_results)
@@ -248,7 +246,7 @@ def main() -> int:
     total_products_created_error = sum(r.get("products_created_error", 0) for r in results.file_results)
     
     # Step 6: Delete processed files
-    eprint(f"\n=== Step 6: Delete Files ===")
+    logger.info(f"\n=== Step 6: Delete Files ===")
     results.step6 = step6_delete_files(
         file_results=results.file_results,
         delete_enabled=DELETE_FILE_AFTER_PROCESS,
@@ -256,29 +254,29 @@ def main() -> int:
     )
     
     if not results.step6["success"]:
-        eprint(f"ERROR deleting files: {results.step6.get('error')}")
+        logger.error(f"ERROR deleting files: {results.step6.get('error')}")
         # Continue execution even if deletion fails
     
     step6_result = results.step6.get("step_result", {})
     if step6_result.get("status") == "skipped":
-        eprint(f"ℹ File deletion skipped: {step6_result.get('error', 'Unknown reason')}")
+        logger.info(f"ℹ File deletion skipped: {step6_result.get('error', 'Unknown reason')}")
     elif step6_result.get("status") == "ok":
         deleted_count = step6_result.get("deleted_count", 0)
         failed_delete_count = step6_result.get("failed_delete_count", 0)
         if deleted_count > 0:
             for deleted_file in step6_result.get("deleted_files", []):
-                eprint(f"  ✓ Deleted: {deleted_file.get('name', deleted_file.get('path', 'N/A'))}")
-            eprint(f"✓ Deleted {deleted_count} file(s)")
+                logger.info(f"  ✓ Deleted: {deleted_file.get('name', deleted_file.get('path', 'N/A'))}")
+            logger.info(f"✓ Deleted {deleted_count} file(s)")
         if failed_delete_count > 0:
             for failed_file in step6_result.get("failed_files", []):
-                eprint(f"  ✗ Failed to delete {failed_file.get('name', failed_file.get('path', 'N/A'))}: {failed_file.get('error', 'Unknown error')}")
-            eprint(f"⚠ Failed to delete {failed_delete_count} file(s)")
+                logger.error(f"  ✗ Failed to delete {failed_file.get('name', failed_file.get('path', 'N/A'))}: {failed_file.get('error', 'Unknown error')}")
+            logger.warning(f"⚠ Failed to delete {failed_delete_count} file(s)")
     
     run_finished_iso = utc_now_iso()
     run_duration = round(time.time() - run_started, 3)
     
     # Step 5: Write metadata
-    eprint(f"\n=== Step 5: Write Metadata ===")
+    logger.info(f"\n=== Step 5: Write Metadata ===")
     results.step5 = step5_write_metadata(
         dir_manager=dir_manager,
         run_started_at_utc=run_started_iso,
@@ -306,13 +304,13 @@ def main() -> int:
     )
     
     if not results.step5["success"]:
-        eprint(f"ERROR writing metadata: {results.step5.get('error')}")
+        logger.error(f"ERROR writing metadata: {results.step5.get('error')}")
         return 1
     
-    eprint(f"✓ Metadata written: {results.step5.get('metadata_path')}")
+    logger.info(f"✓ Metadata written: {results.step5.get('metadata_path')}")
     
     # Summary
-    eprint(
+    logger.info(
         f"\n=== Processing Complete ==="
         f"\nRun dir: {dir_manager.get_run_dir()}"
         f"\nResponses dir: {dir_manager.get_responses_dir()}"

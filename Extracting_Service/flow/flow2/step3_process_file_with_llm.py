@@ -8,12 +8,18 @@ import sys
 import time
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from openai import OpenAI
 
-# Add parent directory to path
+# Setup paths for imports
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../.."))
+import _path_setup  # noqa: F401
+
+from utils.logger import get_logger
+
+# Setup logger
+logger = get_logger(__name__)
 
 
 def sha256_file(path: Path, chunk_size: int = 1024 * 1024) -> str:
@@ -130,7 +136,7 @@ def load_sender_mapping(mapping_file_path: Optional[str]) -> Dict[str, Dict[str,
                 return mapping
             return {}
     except Exception as e:
-        print(f"WARNING: Failed to load sender mapping file {mapping_file_path}: {e}")
+        logger.warning(f"WARNING: Failed to load sender mapping file {mapping_file_path}: {e}")
         return {}
 
 
@@ -154,6 +160,94 @@ def extract_prefix_from_filename(filename: str) -> Optional[str]:
     return None
 
 
+def get_sender_info_from_mapping(
+    prefix: Optional[str],
+    sender_mapping: Dict[str, Dict[str, str]]
+) -> Tuple[Optional[str], Optional[str]]:
+    """
+    Get sender email and name from mapping based on prefix.
+    
+    Pure function - no side effects.
+    
+    Args:
+        prefix: Prefix extracted from filename
+        sender_mapping: Mapping dict from prefix to sender info
+        
+    Returns:
+        Tuple of (sender_email, sender_name), both can be None
+    """
+    if not prefix or not sender_mapping:
+        return None, None
+    
+    sender_info = sender_mapping.get(prefix)
+    if not sender_info:
+        return None, None
+    
+    sender_email = sender_info.get("sender_email") or None
+    sender_name = sender_info.get("sender_name") or None
+    return sender_email, sender_name
+
+
+def enrich_products_with_sender_info(
+    products: List[Dict[str, Any]],
+    filename: str,
+    sender_mapping: Dict[str, Dict[str, str]]
+) -> List[Dict[str, Any]]:
+    """
+    Enrich products with sender information based on filename prefix.
+    
+    Pure function - no side effects, returns new list with enriched products.
+    
+    Args:
+        products: List of product dictionaries
+        filename: Filename to extract prefix from
+        sender_mapping: Mapping dict from prefix to sender info
+        
+    Returns:
+        New list of products with sender_email and sender_name fields added
+    """
+    if not products:
+        return products
+    
+    # Extract prefix from filename
+    prefix = extract_prefix_from_filename(filename)
+    
+    # Lookup sender info from mapping
+    sender_email, sender_name = get_sender_info_from_mapping(prefix, sender_mapping)
+    
+    # Create new list with enriched products
+    enriched_products = []
+    for product in products:
+        enriched_product = product.copy()
+        enriched_product["sender_email"] = sender_email
+        enriched_product["sender_name"] = sender_name
+        enriched_products.append(enriched_product)
+    
+    return enriched_products
+
+
+def load_file_metadata(file_path: str) -> Dict[str, Any]:
+    """
+    Load file metadata (name, size) from file system.
+    
+    Side effect: reads from file system.
+    
+    Args:
+        file_path: Path to file
+        
+    Returns:
+        Dict with 'name' and 'size_bytes' keys
+        
+    Raises:
+        OSError: If file cannot be accessed
+    """
+    path = Path(file_path)
+    return {
+        "name": path.name,
+        "size_bytes": path.stat().st_size,
+    }
+
+
 def execute(
     openai_client: OpenAI,
     file_path: str,
@@ -165,6 +259,10 @@ def execute(
 ) -> Dict[str, Any]:
     """
     Process a single file: upload, call model, parse products.
+    
+    This function orchestrates the processing pipeline by coordinating:
+    - Side effects: file I/O, API calls, loading external data
+    - Pure logic: parsing, data transformation, enrichment
     
     Args:
         openai_client: OpenAI client instance
@@ -179,16 +277,13 @@ def execute(
         Dict with 'success' bool and processing results or 'error' message
     """
     started_at_utc = utc_now_iso()
+    t0 = time.time()
     
-    # Extract file name and size from file path
-    path = Path(file_path)
-    file_name = path.name
-    file_size_bytes = path.stat().st_size
-    
+    # Initialize result structure
     file_result: Dict[str, Any] = {
         "input_path": file_path,
-        "input_name": file_name,
-        "input_size_bytes": file_size_bytes,
+        "input_name": "",
+        "input_size_bytes": 0,
         "input_sha256": "",
         "uploaded_file_id": None,
         "status": "pending",
@@ -201,57 +296,52 @@ def execute(
         "products": None,
     }
     
-    t0 = time.time()
-    
-    # Load sender mapping if provided
-    sender_mapping: Dict[str, Dict[str, str]] = {}
-    if sender_mapping_file:
-        sender_mapping = load_sender_mapping(sender_mapping_file)
-    
     try:
+        # ===== SIDE EFFECTS: Load external data =====
+        # Load file metadata from file system
+        file_metadata = load_file_metadata(file_path)
+        file_result["input_name"] = file_metadata["name"]
+        file_result["input_size_bytes"] = file_metadata["size_bytes"]
         
-        # Calculate SHA256
+        # Load sender mapping from file system (if provided)
+        sender_mapping: Dict[str, Dict[str, str]] = {}
+        if sender_mapping_file:
+            sender_mapping = load_sender_mapping(sender_mapping_file)
+        
+        # ===== SIDE EFFECTS: File operations =====
+        path = Path(file_path)
         file_result["input_sha256"] = sha256_file(path)
         
-        # Upload file
+        # ===== SIDE EFFECTS: API calls =====
+        # Upload file to OpenAI
         file_id = upload_file(openai_client, path, purpose=upload_purpose)
         file_result["uploaded_file_id"] = file_id
         
-        # Call model
+        # Call OpenAI API
         response_text = call_responses_with_file(
             client=openai_client,
             model=model,
             prompt=prompt,
             file_id=file_id,
-            filename=file_name,
+            filename=file_result["input_name"],
             max_output_tokens=max_output_tokens,
         )
         
-        # Parse products from response
+        # ===== PURE LOGIC: Parse and transform data =====
+        # Parse products from API response (pure function)
         products = parse_products_from_response(response_text)
         
-        # Attach sender info to products
-        if products:
-            # Extract prefix from filename
-            prefix = extract_prefix_from_filename(file_name)
-            
-            # Lookup sender info from mapping
-            sender_email = None
-            sender_name = None
-            if prefix and sender_mapping:
-                sender_info = sender_mapping.get(prefix)
-                if sender_info:
-                    sender_email = sender_info.get("sender_email") or None
-                    sender_name = sender_info.get("sender_name") or None
-            
-            # Attach sender info to each product (set to None if not found)
-            for product in products:
-                product["sender_email"] = sender_email
-                product["sender_name"] = sender_name
+        # Enrich products with sender info (pure function)
+        enriched_products = enrich_products_with_sender_info(
+            products=products,
+            filename=file_result["input_name"],
+            sender_mapping=sender_mapping
+        )
         
-        file_result["products_extracted"] = len(products)
-        if products:
-            file_result["products"] = products
+        # Update result with parsed data
+        file_result["products_extracted"] = len(enriched_products)
+        if enriched_products:
+            file_result["products"] = enriched_products
         
         file_result["status"] = "ok"
         
@@ -260,6 +350,7 @@ def execute(
         file_result["error"] = str(ex)
     
     finally:
+        # ===== SIDE EFFECTS: Update timing metadata =====
         file_result["finished_at_utc"] = utc_now_iso()
         file_result["duration_seconds"] = round(time.time() - t0, 3)
     

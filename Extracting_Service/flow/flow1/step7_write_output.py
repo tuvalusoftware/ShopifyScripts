@@ -6,8 +6,10 @@ import json
 from typing import Any, Dict, List
 from datetime import datetime
 
-# Import directory manager
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+# Setup paths for imports
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../.."))
+import _path_setup  # noqa: F401
+
 from utils.directory_manager import DirectoryManager
 
 

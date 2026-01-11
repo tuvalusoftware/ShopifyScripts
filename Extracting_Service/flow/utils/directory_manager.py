@@ -7,26 +7,95 @@ from datetime import datetime
 
 
 class DirectoryManager:
-    """Centralized directory manager for managing all directories used by flows."""
+    """Centralized directory manager for managing all directories used by flows.
     
-    def __init__(self, base_output_dir: str):
+    Singleton pattern: Only one instance exists throughout the application process.
+    Automatically reads OUTPUT_DIR from environment variable on initialization.
+    Use get_instance() to access the singleton instance.
+    """
+    
+    _instance: Optional['DirectoryManager'] = None
+    _initialized: bool = False
+    
+    def __new__(cls):
         """
-        Initialize directory manager with base output directory.
-        
-        Args:
-            base_output_dir: Base output directory path
+        Create or return the singleton instance.
         """
-        self._base_output_dir = Path(base_output_dir).expanduser().resolve()
-        self._ensure_dir(self._base_output_dir)
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+        return cls._instance
+    
+    def __init__(self):
+        """
+        Initialize directory manager with base output directory from environment variable.
+        Reads OUTPUT_DIR from environment, defaults to "." if not set.
+        """
+        # Only initialize once
+        if not DirectoryManager._initialized:
+            # Read OUTPUT_DIR from environment variable
+            output_dir = os.getenv("OUTPUT_DIR", ".")
+            output_dir = os.path.abspath(output_dir)
+            
+            # If output_dir is /app or /app/* and not writable (running locally), use local directory
+            if output_dir.startswith("/app"):
+                test_path = Path(output_dir)
+                try:
+                    test_path.mkdir(parents=True, exist_ok=True)
+                    test_file = test_path / ".test_write_check"
+                    test_file.touch()
+                    test_file.unlink()
+                except (OSError, PermissionError):
+                    output_dir = os.path.abspath("./data")
+                    import logging
+                    logger = logging.getLogger(__name__)
+                    logger.warning(f"Cannot write to /app, using local directory: {output_dir}")
+            
+            self._base_output_dir = Path(output_dir).expanduser().resolve()
+            self._ensure_dir(self._base_output_dir)
+            
+            # Flow1 specific directories (lazy initialization)
+            self._attachments_dir: Optional[Path] = None
+            self._temp_download_dir: Optional[Path] = None
+            self._extraction_out_dir: Optional[Path] = None
+            
+            # Flow2 specific directories (lazy initialization)
+            self._run_dir: Optional[Path] = None
+            self._responses_dir: Optional[Path] = None
+            
+            DirectoryManager._initialized = True
+    
+    @classmethod
+    def get_instance(cls) -> 'DirectoryManager':
+        """
+        Get the singleton instance. Automatically initializes if not already initialized.
         
-        # Flow1 specific directories (lazy initialization)
-        self._attachments_dir: Optional[Path] = None
-        self._temp_download_dir: Optional[Path] = None
-        self._extraction_out_dir: Optional[Path] = None
+        Returns:
+            DirectoryManager: The singleton instance
+        """
+        if cls._instance is None:
+            cls._instance = cls()
+        return cls._instance
+    
+    @classmethod
+    def initialize(cls) -> 'DirectoryManager':
+        """
+        Initialize the singleton instance (reads OUTPUT_DIR from environment).
         
-        # Flow2 specific directories (lazy initialization)
-        self._run_dir: Optional[Path] = None
-        self._responses_dir: Optional[Path] = None
+        Returns:
+            DirectoryManager: The singleton instance
+        """
+        return cls()
+    
+    @classmethod
+    def is_initialized(cls) -> bool:
+        """
+        Check if the singleton instance has been initialized.
+        
+        Returns:
+            bool: True if initialized, False otherwise
+        """
+        return cls._initialized and cls._instance is not None
+    
     
     def _ensure_dir(self, path: Path) -> Path:
         """Ensure directory exists and return Path object."""
@@ -145,3 +214,12 @@ class DirectoryManager:
         self._attachments_dir = None
         self._temp_download_dir = None
         self._extraction_out_dir = None
+    
+    @classmethod
+    def reset_instance(cls) -> None:
+        """
+        Reset the singleton instance (useful for testing).
+        This clears the singleton state and allows re-initialization.
+        """
+        cls._instance = None
+        cls._initialized = False

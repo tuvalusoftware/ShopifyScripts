@@ -7,12 +7,11 @@ from typing import Any, Dict, Optional
 
 from openai import OpenAI
 
-# Add parent directory to path
+# Setup paths for imports
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../.."))
-from domain.DynamoServiceClient import DynamoServiceClient
+import _path_setup  # noqa: F401
 
-# Import directory manager
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+from domain.DynamoServiceClient import DynamoServiceClient
 from utils.directory_manager import DirectoryManager
 
 

@@ -4,12 +4,11 @@ import sys
 import os
 from typing import Any, Dict
 
-# Add parent directory to path to import parse_eml
+# Setup paths for imports
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../.."))
-from parse_eml import parse_eml_file
+import _path_setup  # noqa: F401
 
-# Import directory manager
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+from parse_eml import parse_eml_file
 from utils.directory_manager import DirectoryManager
 
 

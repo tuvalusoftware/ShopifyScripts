@@ -9,12 +9,15 @@ import re
 from typing import Any, Dict, List, Optional
 from datetime import datetime
 
-# Add parent directory to path
+# Setup paths for imports
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../.."))
+import _path_setup  # noqa: F401
 
-# Import directory manager
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from utils.directory_manager import DirectoryManager
+from utils.logger import get_logger
+
+# Setup logger
+logger = get_logger(__name__)
 
 
 def extract_prefix_from_attachment_path(attachment_path: str) -> Optional[str]:
@@ -101,7 +104,7 @@ def create_sender_mapping_file(
             json.dump(mapping, f, ensure_ascii=False, indent=2)
         return mapping_file_path
     except Exception as e:
-        print(f"WARNING: Failed to create sender mapping file: {e}")
+        logger.warning(f"WARNING: Failed to create sender mapping file: {e}")
         return None
 
 
@@ -163,7 +166,7 @@ def execute(
             output_dir=extraction_out_dir,  # Save mapping file in extraction_out_dir
         )
         if sender_mapping_file:
-            print(f"Created sender mapping file: {sender_mapping_file}")
+            logger.info(f"Created sender mapping file: {sender_mapping_file}")
     
     # Check if there are any files in the attachments directory
     try:
