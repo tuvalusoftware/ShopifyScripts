@@ -10,10 +10,11 @@ import json
 import tempfile
 import uuid
 from datetime import datetime
-from pathlib import Path
 from typing import Dict, Any, Optional, List, TypedDict
 import requests
 from requests.exceptions import RequestException, HTTPError
+import boto3  # type: ignore
+from botocore.exceptions import ClientError, BotoCoreError  # type: ignore
 
 
 # ============================================================================
@@ -104,13 +105,15 @@ class DynamoServiceClient:
     If not set, an error will be raised when attempting to make API calls.
     """
     
-    def __init__(self, api_url: Optional[str] = None):
+    def __init__(self, api_url: Optional[str] = None, s3_client: Any = None):
         """
         Initialize the DynamoServiceClient.
         
         Args:
             api_url: Optional API base URL. If not provided, will be read from
                     DYNAMO_SERVICE_API_URL environment variable.
+            s3_client: Optional boto3 S3 client. If not provided, will be created
+                      using AWS_REGION environment variable.
         
         Raises:
             ValueError: If api_url is not provided and DYNAMO_SERVICE_API_URL is not set.
@@ -123,42 +126,85 @@ class DynamoServiceClient:
             )
         # Remove trailing slash if present
         self._api_url: str = api_url_value.rstrip("/")
-    
-    def _get_payloads_dir(self) -> str:
-        """
-        Get the directory path for storing payload JSON files.
         
-        Returns:
-            Path to payloads directory (default: data/payloads/)
-        """
-        # Use OUTPUT_DIR if set, otherwise default to data/
-        base_dir = os.getenv("OUTPUT_DIR", "/app/data")
-        payloads_dir = Path(base_dir) / "payloads"
-        payloads_dir.mkdir(parents=True, exist_ok=True)
-        return str(payloads_dir)
+        # Initialize S3 client for archiving payloads
+        if s3_client is not None:
+            self._s3_client: Any = s3_client
+        else:
+            aws_region = os.getenv("AWS_REGION", "ap-southeast-1")
+            self._s3_client: Any = boto3.client("s3", region_name=aws_region)  # type: ignore
     
-    def _save_payload_to_file(self, payload: Dict[str, Any], prefix: str = "payload") -> str:
+    def _save_payload_to_s3(self, payload: Dict[str, Any], prefix: str = "payload") -> str:
         """
-        Save payload to a JSON file in the payloads directory for debugging.
+        Save payload to S3 archive bucket for debugging.
         
         Args:
             payload: The payload dictionary to save
             prefix: Prefix for the filename (default: "payload")
         
         Returns:
-            Path to the saved file
+            S3 key path to the saved file
+        
+        Raises:
+            ValueError: If ARCHIVE_BUCKET environment variable is not set.
         """
-        payloads_dir = self._get_payloads_dir()
+        archive_bucket = os.getenv("ARCHIVE_BUCKET")
+        if not archive_bucket:
+            raise ValueError(
+                "ARCHIVE_BUCKET environment variable must be set to save payloads to S3"
+            )
+        
+        aws_region = os.getenv("AWS_REGION", "ap-southeast-1")
+        
+        # Generate unique filename
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         unique_id = str(uuid.uuid4())[:8]
         filename = f"{prefix}_{timestamp}_{unique_id}.json"
-        file_path = Path(payloads_dir) / filename
+        s3_key = f"archived_json_payloads/{filename}"
         
-        with open(file_path, 'w', encoding='utf-8') as f:
-            json.dump(payload, f, indent=2, ensure_ascii=False)
-        
-        print(f"Payload saved to: {file_path}")
-        return str(file_path)
+        try:
+            # Check if archive bucket exists, create if not
+            try:
+                self._s3_client.head_bucket(Bucket=archive_bucket)
+            except ClientError as e:
+                error_code: str = e.response.get("Error", {}).get("Code", "")  # type: ignore
+                if error_code == "404":
+                    # Bucket doesn't exist, create it
+                    try:
+                        if aws_region == "us-east-1":
+                            # us-east-1 doesn't need LocationConstraint
+                            self._s3_client.create_bucket(Bucket=archive_bucket)
+                        else:
+                            self._s3_client.create_bucket(
+                                Bucket=archive_bucket,
+                                CreateBucketConfiguration={"LocationConstraint": aws_region}
+                            )
+                    except ClientError as create_error:
+                        # Handle case where bucket might be created by another process
+                        create_error_code: str = create_error.response.get("Error", {}).get("Code", "")  # type: ignore
+                        if create_error_code != "BucketAlreadyOwnedByYou":
+                            raise ValueError(f"Failed to create archive bucket: {str(create_error)}") from create_error
+                else:
+                    # Other error (access denied, etc.)
+                    raise ValueError(f"Failed to access archive bucket: {str(e)}") from e
+            
+            # Convert payload to JSON string
+            json_content = json.dumps(payload, indent=2, ensure_ascii=False)
+            
+            # Upload to S3
+            self._s3_client.put_object(
+                Bucket=archive_bucket,
+                Key=s3_key,
+                Body=json_content.encode('utf-8'),
+                ContentType='application/json'
+            )
+            
+            s3_path = f"s3://{archive_bucket}/{s3_key}"
+            print(f"Payload saved to S3: {s3_path}")
+            return s3_path
+            
+        except (ClientError, BotoCoreError) as e:
+            raise ValueError(f"Failed to save payload to S3: {str(e)}") from e
     
     def create_product(
         self,
@@ -256,9 +302,13 @@ class DynamoServiceClient:
                 "sample_products": [properties]
             }
         
-        # Save payload to file for debugging (prod mode)
-        payload_file_path = self._save_payload_to_file(payload, prefix="payload_single")
-        print(f"Payload file saved for debugging: {payload_file_path}")
+        # Save payload to S3 archive bucket for debugging (prod mode)
+        try:
+            payload_s3_path = self._save_payload_to_s3(payload, prefix="payload_single")
+            print(f"Payload file saved for debugging: {payload_s3_path}")
+        except ValueError as e:
+            # If ARCHIVE_BUCKET is not set, log warning but continue
+            print(f"WARNING: Could not save payload to S3: {e}")
         
         # Make POST request to /data/insert endpoint with multipart/form-data
         url = f"{self._api_url}/data/insert"
@@ -400,9 +450,13 @@ class DynamoServiceClient:
                 "sample_products": products[:5]  # Return first 5 as sample
             }
         
-        # Save payload to file for debugging (prod mode)
-        payload_file_path = self._save_payload_to_file(payload, prefix="payload_batch")
-        print(f"Payload file saved for debugging: {payload_file_path}")
+        # Save payload to S3 archive bucket for debugging (prod mode)
+        try:
+            payload_s3_path = self._save_payload_to_s3(payload, prefix="payload_batch")
+            print(f"Payload file saved for debugging: {payload_s3_path}")
+        except ValueError as e:
+            # If ARCHIVE_BUCKET is not set, log warning but continue
+            print(f"WARNING: Could not save payload to S3: {e}")
         
         # Make POST request to /data/insert endpoint with multipart/form-data
         url = f"{self._api_url}/data/insert"
