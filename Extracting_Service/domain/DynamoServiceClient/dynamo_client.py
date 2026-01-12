@@ -194,6 +194,20 @@ class DynamoServiceClient:
         except (ClientError, BotoCoreError) as e:
             raise ValueError(f"Failed to save payload to S3: {str(e)}") from e
     
+    def _get_import_endpoint(self, supplier: Optional[SupplierDTO] = None) -> str:
+        """
+        Determine the import endpoint based on order_number presence.
+        
+        Args:
+            supplier: Optional supplier information DTO
+            
+        Returns:
+            Endpoint path: "/data/import/oc" if order_number exists, "/data/import/linesheet" otherwise
+        """
+        if supplier and supplier.get("order_number"):
+            return "/data/import/oc"
+        return "/data/import/linesheet"
+    
     def create_product(
         self,
         properties: Dict[str, Any],
@@ -298,8 +312,9 @@ class DynamoServiceClient:
             # If ARCHIVE_BUCKET is not set, log warning but continue
             print(f"WARNING: Could not save payload to S3: {e}")
         
-        # Make POST request to /data/import/oc endpoint with multipart/form-data
-        url = f"{self._api_url}/data/import/oc"
+        # Determine endpoint based on order_number presence
+        endpoint = self._get_import_endpoint(supplier)
+        url = f"{self._api_url}{endpoint}"
         # log the payload
         print(f"Payload: {payload}")
         print(f"URL: {url}")
@@ -446,8 +461,9 @@ class DynamoServiceClient:
             # If ARCHIVE_BUCKET is not set, log warning but continue
             print(f"WARNING: Could not save payload to S3: {e}")
         
-        # Make POST request to /data/import/oc endpoint with multipart/form-data
-        url = f"{self._api_url}/data/import/oc"
+        # Determine endpoint based on order_number presence
+        endpoint = self._get_import_endpoint(supplier)
+        url = f"{self._api_url}{endpoint}"
         # log the payload
         print(f"Batch Payload: {len(products)} products")
         print(f"URL: {url}")
