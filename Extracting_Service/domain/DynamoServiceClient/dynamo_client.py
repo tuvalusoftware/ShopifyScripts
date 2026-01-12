@@ -29,6 +29,7 @@ SupplierDTO = TypedDict(
         'merchant': Optional[str],
         'currency_code': Optional[str],
         'delivery_data': Optional[str],
+        'products': Optional[List[Dict[str, Any]]],
     },
     total=False
 )
@@ -82,19 +83,17 @@ class CreateProductRequestDTO(TypedDict, total=False):
             "sender_name": "...",
             "merchant": "...",
             "currency_code": "USD",
-            "delivery_data": "..."
-        },
-        "products": [...]
+            "delivery_data": "...",
+            "products": [...]
+        }
     }
     
     Fields:
         shop_domain: Shopify store domain
-        supplier: Supplier information DTO
-        products: List of product DTOs
+        supplier: Supplier information DTO (contains products inside)
     """
     shop_domain: Optional[str]
     supplier: Optional[SupplierDTO]
-    products: Optional[List[ProductRequestDTO]]
 
 
 class DynamoServiceClient:
@@ -174,8 +173,10 @@ class DynamoServiceClient:
         1. Enhanced Format (if shop_domain or supplier provided):
            {
                "shop_domain": "...",
-               "supplier": {...},
-               "products": [...]
+               "supplier": {
+                   ...,
+                   "products": [...]
+               }
            }
         2. Legacy Format (Format 2: Direct Products Format):
            {"products": [...]}
@@ -214,13 +215,17 @@ class DynamoServiceClient:
         # Build request payload
         # Use enhanced format if shop_domain or supplier is provided
         if shop_domain or supplier:
-            payload: Dict[str, Any] = {
-                "products": [properties]
-            }
+            payload: Dict[str, Any] = {}
             if shop_domain:
                 payload["shop_domain"] = shop_domain
             if supplier:
-                payload["supplier"] = supplier
+                # Create supplier dict with products inside
+                supplier_with_products = dict(supplier) if supplier else {}
+                supplier_with_products["products"] = [properties]
+                payload["supplier"] = supplier_with_products
+            else:
+                # If only shop_domain provided, create empty supplier with products
+                payload["supplier"] = {"products": [properties]}
         else:
             # Legacy format (Format 2: Direct Products Format)
             payload: Dict[str, Any] = {
@@ -313,8 +318,10 @@ class DynamoServiceClient:
         1. Enhanced Format (if shop_domain or supplier provided):
            {
                "shop_domain": "...",
-               "supplier": {...},
-               "products": [...]
+               "supplier": {
+                   ...,
+                   "products": [...]
+               }
            }
         2. Legacy Format (Format 2: Direct Products Format):
            {"products": [...]}
@@ -352,13 +359,17 @@ class DynamoServiceClient:
         # Build request payload
         # Use enhanced format if shop_domain or supplier is provided
         if shop_domain or supplier:
-            payload: Dict[str, Any] = {
-                "products": products
-            }
+            payload: Dict[str, Any] = {}
             if shop_domain:
                 payload["shop_domain"] = shop_domain
             if supplier:
-                payload["supplier"] = supplier
+                # Create supplier dict with products inside
+                supplier_with_products = dict(supplier) if supplier else {}
+                supplier_with_products["products"] = products
+                payload["supplier"] = supplier_with_products
+            else:
+                # If only shop_domain provided, create empty supplier with products
+                payload["supplier"] = {"products": products}
         else:
             # Legacy format (Format 2: Direct Products Format)
             payload: Dict[str, Any] = {
