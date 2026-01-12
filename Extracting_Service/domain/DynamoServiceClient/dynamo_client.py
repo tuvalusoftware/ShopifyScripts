@@ -8,6 +8,9 @@ The API base URL is configured via the DYNAMO_SERVICE_API_URL environment variab
 import os
 import json
 import tempfile
+import uuid
+from datetime import datetime
+from pathlib import Path
 from typing import Dict, Any, Optional, List, TypedDict
 import requests
 from requests.exceptions import RequestException, HTTPError
@@ -122,6 +125,42 @@ class DynamoServiceClient:
         # Remove trailing slash if present
         self._api_url: str = api_url_value.rstrip("/")
     
+    def _get_payloads_dir(self) -> str:
+        """
+        Get the directory path for storing payload JSON files.
+        
+        Returns:
+            Path to payloads directory (default: data/payloads/)
+        """
+        # Use OUTPUT_DIR if set, otherwise default to data/
+        base_dir = os.getenv("OUTPUT_DIR", "/app/data")
+        payloads_dir = Path(base_dir) / "payloads"
+        payloads_dir.mkdir(parents=True, exist_ok=True)
+        return str(payloads_dir)
+    
+    def _save_payload_to_file(self, payload: Dict[str, Any], prefix: str = "payload") -> str:
+        """
+        Save payload to a JSON file in the payloads directory for debugging.
+        
+        Args:
+            payload: The payload dictionary to save
+            prefix: Prefix for the filename (default: "payload")
+        
+        Returns:
+            Path to the saved file
+        """
+        payloads_dir = self._get_payloads_dir()
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        unique_id = str(uuid.uuid4())[:8]
+        filename = f"{prefix}_{timestamp}_{unique_id}.json"
+        file_path = Path(payloads_dir) / filename
+        
+        with open(file_path, 'w', encoding='utf-8') as f:
+            json.dump(payload, f, indent=2, ensure_ascii=False)
+        
+        print(f"Payload saved to: {file_path}")
+        return str(file_path)
+    
     def create_product(
         self,
         properties: Dict[str, Any],
@@ -212,13 +251,17 @@ class DynamoServiceClient:
                 "sample_products": [properties]
             }
         
+        # Save payload to file for debugging (prod mode)
+        payload_file_path = self._save_payload_to_file(payload, prefix="payload_single")
+        print(f"Payload file saved for debugging: {payload_file_path}")
+        
         # Make POST request to /data/insert endpoint with multipart/form-data
         url = f"{self._api_url}/data/insert"
         # log the payload
         print(f"Payload: {payload}")
         print(f"URL: {url}")
         
-        # Create temporary JSON file
+        # Create temporary JSON file for API upload
         with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as tmp_file:
             json.dump(payload, tmp_file, indent=2)
             tmp_file_path = tmp_file.name
@@ -251,7 +294,7 @@ class DynamoServiceClient:
         except RequestException as e:
             raise RequestException(f"Failed to create product: {str(e)}") from e
         finally:
-            # Clean up temporary file
+            # Clean up temporary file (payload file is kept for debugging)
             try:
                 os.unlink(tmp_file_path)
             except Exception:
@@ -346,13 +389,17 @@ class DynamoServiceClient:
                 "sample_products": products[:5]  # Return first 5 as sample
             }
         
+        # Save payload to file for debugging (prod mode)
+        payload_file_path = self._save_payload_to_file(payload, prefix="payload_batch")
+        print(f"Payload file saved for debugging: {payload_file_path}")
+        
         # Make POST request to /data/insert endpoint with multipart/form-data
         url = f"{self._api_url}/data/insert"
         # log the payload
         print(f"Batch Payload: {len(products)} products")
         print(f"URL: {url}")
         
-        # Create temporary JSON file
+        # Create temporary JSON file for API upload
         with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as tmp_file:
             json.dump(payload, tmp_file, indent=2)
             tmp_file_path = tmp_file.name
@@ -385,7 +432,7 @@ class DynamoServiceClient:
         except RequestException as e:
             raise RequestException(f"Failed to create products batch: {str(e)}") from e
         finally:
-            # Clean up temporary file
+            # Clean up temporary file (payload file is kept for debugging)
             try:
                 os.unlink(tmp_file_path)
             except Exception:
