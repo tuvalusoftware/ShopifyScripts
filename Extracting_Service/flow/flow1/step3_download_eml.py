@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """Step 3: Download EML file from S3."""
 from typing import Any, Dict
-from botocore.exceptions import ClientError, BotoCoreError
+from botocore.exceptions import ClientError, BotoCoreError  # type: ignore
 
 
-def execute(s3_client, bucket: str, key: str, local_path: str) -> Dict[str, Any]:
+def execute(s3_client: Any, bucket: str, key: str, local_path: str) -> Dict[str, Any]:
     """
     Download a file from S3 to local path.
     

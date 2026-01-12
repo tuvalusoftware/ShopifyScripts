@@ -2,10 +2,10 @@
 """Step 2: List EML files from S3."""
 import os
 from typing import Any, Dict, List
-from botocore.exceptions import ClientError, BotoCoreError
+from botocore.exceptions import ClientError, BotoCoreError  # type: ignore
 
 
-def execute(s3_client, bucket: str, prefix: str) -> Dict[str, Any]:
+def execute(s3_client: Any, bucket: str, prefix: str) -> Dict[str, Any]:
     """
     List all .eml files in S3 bucket with given prefix.
     
