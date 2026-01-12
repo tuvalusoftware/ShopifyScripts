@@ -83,7 +83,7 @@ Product = TypedDict(
         'extracted_image_name': Optional[str],  # Added by step5 image extraction
         'extracted_image_page': Optional[int],  # Added by step5 image extraction
         'extracted_image_position': Optional[str],  # Added by step5 image extraction
-        'extracted_image_s3_url': Optional[str],  # Added by step5 S3 sync
+        'images': Optional[List[str]],  # Added by step5 S3 sync - array of image URLs
     },
     total=False
 )

@@ -71,11 +71,14 @@ def sync_images_to_s3(
             updated_results.append(file_result_copy)
             continue
         
-        # Update each product with S3 URL
+        # Update each product with S3 URL in images array
         updated_products: List[Product] = []
         for product in products:
             product_copy: Product = cast(Product, dict(product))
             extracted_image_name = product_copy.get("extracted_image_name")
+            
+            # Initialize images array
+            images_list: List[str] = []
             
             if extracted_image_name:
                 # Construct local file path
@@ -100,12 +103,12 @@ def sync_images_to_s3(
                         expiration_hours = int(os.getenv("S3_PRESIGNED_URL_EXPIRATION_HOURS", "8760"))  # Default: 1 year
                         expiration = timedelta(hours=expiration_hours)
                         
-                        s3_url = s3_client.generate_presigned_url(  # type: ignore
+                        s3_url = cast(str, s3_client.generate_presigned_url(  # type: ignore
                             "get_object",
                             Params={"Bucket": s3_bucket, "Key": s3_key},
                             ExpiresIn=int(expiration.total_seconds()),
-                        )
-                        product_copy["extracted_image_s3_url"] = s3_url
+                        ))
+                        images_list.append(s3_url)
                         sync_stats["total_images_synced"] += 1
                         
                         logger.debug(
@@ -116,17 +119,15 @@ def sync_images_to_s3(
                         logger.warning(
                             f"Failed to sync image {extracted_image_name} to S3: {ex}"
                         )
-                        product_copy["extracted_image_s3_url"] = None
                         sync_stats["failed_sync_count"] += 1
                 else:
                     logger.warning(
                         f"Image file not found for sync: {local_image_path}"
                     )
-                    product_copy["extracted_image_s3_url"] = None
                     sync_stats["failed_sync_count"] += 1
-            else:
-                # No image extracted, set S3 URL to None
-                product_copy["extracted_image_s3_url"] = None
+            
+            # Set images array (empty list if no images, or list with URLs if synced)
+            product_copy["images"] = images_list if images_list else None
             
             updated_products.append(product_copy)
         
