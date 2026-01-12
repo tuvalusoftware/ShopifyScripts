@@ -1,7 +1,14 @@
 #!/usr/bin/env python3
 """Step 5: Archive EML file to S3 archive bucket."""
+import os
+import sys
 from typing import Any, Dict
 from botocore.exceptions import ClientError, BotoCoreError  # type: ignore
+
+# Setup paths for imports
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../.."))
+
+from utils.s3_utils import ensure_s3_bucket_exists
 
 
 def execute(s3_client: Any, bucket: str, key: str, archive_bucket: str, aws_region: str) -> Dict[str, Any]:
@@ -21,38 +28,12 @@ def execute(s3_client: Any, bucket: str, key: str, archive_bucket: str, aws_regi
     archived_key = f"archived_eml/{key}"
     
     try:
-        # Check if archive bucket exists
-        try:
-            s3_client.head_bucket(Bucket=archive_bucket)
-        except ClientError as e:
-            error_code: str = e.response.get("Error", {}).get("Code", "")  # type: ignore
-            if error_code == "404":
-                # Bucket doesn't exist, create it
-                try:
-                    if aws_region == "us-east-1":
-                        # us-east-1 doesn't need LocationConstraint
-                        s3_client.create_bucket(Bucket=archive_bucket)
-                    else:
-                        s3_client.create_bucket(
-                            Bucket=archive_bucket,
-                            CreateBucketConfiguration={"LocationConstraint": aws_region}
-                        )
-                except ClientError as create_error:
-                    # Handle case where bucket might be created by another process
-                    create_error_code: str = create_error.response.get("Error", {}).get("Code", "")  # type: ignore
-                    if create_error_code == "BucketAlreadyOwnedByYou":
-                        pass  # Bucket was created by another process, continue
-                    else:
-                        return {
-                            "success": False,
-                            "error": f"Failed to create archive bucket: {str(create_error)}",
-                        }
-            else:
-                # Other error (access denied, etc.)
-                return {
-                    "success": False,
-                    "error": f"Failed to access archive bucket: {str(e)}",
-                }
+        # Check if archive bucket exists, create if it doesn't
+        if not ensure_s3_bucket_exists(s3_client, archive_bucket, aws_region):
+            return {
+                "success": False,
+                "error": f"Failed to access or create archive bucket '{archive_bucket}'",
+            }
         
         # Copy object to archive bucket
         copy_source = {"Bucket": bucket, "Key": key}

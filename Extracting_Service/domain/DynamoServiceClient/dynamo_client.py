@@ -6,6 +6,7 @@ The API base URL is configured via the DYNAMO_SERVICE_API_URL environment variab
 """
 
 import os
+import sys
 import json
 import tempfile
 import uuid
@@ -15,6 +16,13 @@ import requests
 from requests.exceptions import RequestException, HTTPError
 import boto3  # type: ignore
 from botocore.exceptions import ClientError, BotoCoreError  # type: ignore
+
+# Setup paths for imports from flow/utils
+_current_dir = os.path.dirname(os.path.abspath(__file__))
+_extracting_service_dir = os.path.join(_current_dir, "../..")
+sys.path.insert(0, _extracting_service_dir)
+
+from flow.utils.s3_utils import ensure_s3_bucket_exists  # type: ignore
 
 
 # ============================================================================
@@ -164,29 +172,8 @@ class DynamoServiceClient:
         
         try:
             # Check if archive bucket exists, create if not
-            try:
-                self._s3_client.head_bucket(Bucket=archive_bucket)
-            except ClientError as e:
-                error_code: str = e.response.get("Error", {}).get("Code", "")  # type: ignore
-                if error_code == "404":
-                    # Bucket doesn't exist, create it
-                    try:
-                        if aws_region == "us-east-1":
-                            # us-east-1 doesn't need LocationConstraint
-                            self._s3_client.create_bucket(Bucket=archive_bucket)
-                        else:
-                            self._s3_client.create_bucket(
-                                Bucket=archive_bucket,
-                                CreateBucketConfiguration={"LocationConstraint": aws_region}
-                            )
-                    except ClientError as create_error:
-                        # Handle case where bucket might be created by another process
-                        create_error_code: str = create_error.response.get("Error", {}).get("Code", "")  # type: ignore
-                        if create_error_code != "BucketAlreadyOwnedByYou":
-                            raise ValueError(f"Failed to create archive bucket: {str(create_error)}") from create_error
-                else:
-                    # Other error (access denied, etc.)
-                    raise ValueError(f"Failed to access archive bucket: {str(e)}") from e
+            if not ensure_s3_bucket_exists(self._s3_client, archive_bucket, aws_region):
+                raise ValueError(f"Failed to access or create archive bucket '{archive_bucket}'")
             
             # Convert payload to JSON string
             json_content = json.dumps(payload, indent=2, ensure_ascii=False)

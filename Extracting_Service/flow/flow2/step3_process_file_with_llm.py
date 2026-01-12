@@ -80,6 +80,10 @@ Product = TypedDict(
         'store_id': Optional[str],  # Added by enrichment
         'sender_email': Optional[str],  # Added by enrichment
         'sender_name': Optional[str],  # Added by enrichment
+        'extracted_image_name': Optional[str],  # Added by step5 image extraction
+        'extracted_image_page': Optional[int],  # Added by step5 image extraction
+        'extracted_image_position': Optional[str],  # Added by step5 image extraction
+        'extracted_image_s3_url': Optional[str],  # Added by step5 S3 sync
     },
     total=False
 )

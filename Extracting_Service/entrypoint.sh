@@ -22,6 +22,7 @@ echo "Exporting environment variables for cron..."
     [ -n "${DELETE_FILE_AFTER_PROCESS:-}" ] && printf "export DELETE_FILE_AFTER_PROCESS=%q\n" "$DELETE_FILE_AFTER_PROCESS"
     [ -n "${DEV_TEST_SCHEMA:-}" ] && printf "export DEV_TEST_SCHEMA=%q\n" "$DEV_TEST_SCHEMA"
     [ -n "${SHOP_DOMAIN:-}" ] && printf "export SHOP_DOMAIN=%q\n" "$SHOP_DOMAIN"
+    [ -n "${S3_IMAGE_BUCKET:-}" ] && printf "export S3_IMAGE_BUCKET=%q\n" "$S3_IMAGE_BUCKET"
 } > /app/cron-env
 
 # Apply crontab from mounted volume
