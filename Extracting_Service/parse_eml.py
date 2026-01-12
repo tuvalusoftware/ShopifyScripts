@@ -70,7 +70,7 @@ def extract_best_body(msg: Message) -> Tuple[str, str]:
                 continue
 
             payload = part.get_payload(decode=True)
-            if payload is None:
+            if payload is None or not isinstance(payload, bytes):
                 continue
 
             charset = part.get_content_charset() or "utf-8"
@@ -84,7 +84,12 @@ def extract_best_body(msg: Message) -> Tuple[str, str]:
             elif ctype == "text/html" and decoded.strip():
                 html_parts.append(decoded.strip())
     else:
-        payload = msg.get_payload(decode=True) or b""
+        payload = msg.get_payload(decode=True)
+        if payload is None:
+            payload = b""
+        if not isinstance(payload, bytes):
+            payload = b""
+        
         charset = msg.get_content_charset() or "utf-8"
         try:
             decoded = payload.decode(charset, errors="replace")
@@ -121,7 +126,7 @@ def save_attachments(msg: Message, out_dir: str, prefix: str) -> List[Dict[str, 
             continue
 
         payload = part.get_payload(decode=True)
-        if payload is None:
+        if payload is None or not isinstance(payload, bytes):
             continue
 
         idx += 1

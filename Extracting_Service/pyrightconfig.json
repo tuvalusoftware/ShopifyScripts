@@ -1,0 +1,7 @@
+{
+  "typeCheckingMode": "strict",
+  "reportGeneralTypeIssues": "error",
+  "reportUnknownMemberType": "error",
+  "reportUnknownArgumentType": "error",
+  "reportUnknownVariableType": "error"
+}

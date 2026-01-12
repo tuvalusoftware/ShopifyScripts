@@ -11,7 +11,6 @@ from datetime import datetime
 
 # Setup paths for imports
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../.."))
-import _path_setup  # noqa: F401
 
 from utils.directory_manager import DirectoryManager
 from utils.logger import get_logger

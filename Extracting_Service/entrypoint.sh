@@ -19,6 +19,8 @@ echo "Exporting environment variables for cron..."
     [ -n "${EXTRACTION_PROMPT_FILE:-}" ] && printf "export EXTRACTION_PROMPT_FILE=%q\n" "$EXTRACTION_PROMPT_FILE"
     [ -n "${MAX_BYTES:-}" ] && printf "export MAX_BYTES=%q\n" "$MAX_BYTES"
     [ -n "${DELETE_FILE_AFTER_PROCESS:-}" ] && printf "export DELETE_FILE_AFTER_PROCESS=%q\n" "$DELETE_FILE_AFTER_PROCESS"
+    [ -n "${DEV_TEST_SCHEMA:-}" ] && printf "export DEV_TEST_SCHEMA=%q\n" "$DEV_TEST_SCHEMA"
+    [ -n "${SHOP_DOMAIN:-}" ] && printf "export SHOP_DOMAIN=%q\n" "$SHOP_DOMAIN"
 } > /app/cron-env
 
 # Apply crontab from mounted volume

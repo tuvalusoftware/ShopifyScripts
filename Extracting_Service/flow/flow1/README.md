@@ -16,7 +16,7 @@ The flow consists of 7 sequential steps, each implemented as a separate module:
 6. **Step 6: Extract Products** (`step6_extract_products.py`)
 7. **Step 7: Write Output** (`step7_write_output.py`)
 
-The main orchestration file (`flow1.py`) coordinates these steps and manages the execution flow. Steps 3-5 are executed per file in a loop, while steps 1, 2, 6, and 7 are executed once per run.
+The main orchestration file (`flow1.py`) coordinates these steps and manages the execution flow. Steps 3-5 are executed per file in a loop, while steps 1, 2, 7, and 6 are executed once per run. Note: Step 7 (Write Output) executes before Step 6 (Extract Products).
 
 ## Features
 
@@ -51,8 +51,8 @@ The main orchestration file (`flow1.py`) coordinates these steps and manages the
    - **Save Attachments**: Saves email attachments to attachments directory with prefix-based naming
    - **Delete**: Optionally deletes processed EML file from S3
    - **Cleanup**: Removes temporary downloaded file
-4. **Output Writing**: Aggregates all processed email records into JSON output file
-5. **Product Extraction** (optional): If enabled, calls Flow 2 to process attachments and extract products
+4. **Output Writing**: Aggregates all processed email records into JSON output file (executes after all files are processed)
+5. **Product Extraction** (optional): If enabled, calls Flow 2 to process attachments and extract products (executes after output writing, uses email records to create sender mapping)
 
 ### Output Data
 
@@ -105,8 +105,8 @@ Per-file result dictionary:
 Per-file result dictionary:
 
 - `success`: Boolean indicating deletion success
-- `skipped`: Boolean indicating if deletion was skipped
-- `s3_key`: S3 object key that was deleted
+- `skipped`: Boolean indicating if deletion was skipped (only present when skipped=True)
+- `s3_key`: S3 object key that was deleted (only present when skipped=True)
 - `error`: Error message if deletion failed
 
 ### Step 6 Output (`step6_extract_products`)
@@ -114,8 +114,15 @@ Per-file result dictionary:
 - `success`: Boolean indicating extraction success
 - `skipped`: Boolean indicating if extraction was skipped
 - `message`: Informational message about extraction status
-- `log_file`: Path to extraction log file
+- `log_file`: Path to extraction log file (present when extraction runs)
 - `error`: Error message if extraction failed
+
+**Step 6 Input Parameters:**
+
+- `dir_manager`: DirectoryManager instance
+- `prompt_file`: Path to prompt file for extraction
+- `extraction_out_dir`: Output directory for extraction results
+- `records`: List of email records from step4 (used to create sender mapping file)
 
 ### Step 7 Output (`step7_write_output`)
 

@@ -1,73 +1,196 @@
+TASK:
+Extract product data from the document.
 
-You are an experienced buyer working for Shopify as a professional buyer. It is your job to extract product descriptions from line sheets. Linesheets have similar product descriptions but different layouts.
-The returned JSON should include a description for ALL the products in the PDF. 
-You will be given ONE PDF document at a time.
-Task:  Return ALL products found in the file. Do not return a sample, example, summary, or ‘first N items’. If output would be too long, return multiple JSON arrays in sequential parts using part and is_last fields.”
-   - Do not ask for confirmation.
-    - Do not include commentary.
-    - Do not repeat products from earlier parts.
-    - Continue from where you left off.
-    - Return ONLY valid JSON.
-    - use ONLY the connonical fields 
-    "product_name",
-    "style_number",
-    "availability",
-    "color",
-    "color_code",
-    "size",
-    "description",
-    "material",
-    "certifications",
-    "country_of_origin",
-    "retail_price",
-    "ws_price",
-    "RPR",
-    "quantity_ordered",
-    "units",
-    "totalL_pieces",
-    "family",
-    "net_price",
-    "total",
+GOAL:
+For each product_name, collect ALL available attributes that appear
+DIRECTLY BELOW that product_name in the document.
 
-   - if a field is empty set it as null
+From the header or footer collect 
+-merchants name 
+-the order number
+-delivery date 
 
-EXAMPLE OF RETURNED JSON 
+IMPORTANT SCOPE RULE:
+Only collect attributes that are physically located directly below
+the product_name in the source text.
+Do NOT infer, guess, or copy attributes from other products.
+If an attribute is not present directly below the product_name, set it to null.
+
+────────────────────────────────────────
+IMAGE + LAYOUT AWARENESS (ADDITIVE LOGIC)
+────────────────────────────────────────
+
+DOCUMENT STRUCTURE ASSUMPTION:
+The document may contain images with bounding boxes, and text blocks
+with bounding boxes.
+
+IMAGE–PRODUCT ASSOCIATION RULES:
+- A product_name MAY have an image directly ABOVE it.
+- The associated image is the nearest image whose bounding box:
+  a) is vertically ABOVE the product_name bounding box, AND
+  b) has significant horizontal overlap with the product_name
+     (at least 30% overlap of width), AND
+  c) has the smallest vertical gap to the product_name among candidates.
+- If no such image exists, image fields MUST be null.
+
+DESCRIPTION ABOVE IMAGE (LIMITED EXCEPTION):
+- Some product description text MAY appear directly ABOVE the associated image.
+- If present, capture ONLY the nearest contiguous text block(s) immediately
+  above the image that:
+  a) overlap horizontally with the image, AND
+  b) are closer to the image than any other product_name, AND
+  c) clearly describe the same product.
+- This text may be assigned ONLY to the `description` field.
+- This exception applies ONLY to description text.
+- ALL other attributes must still obey the "directly below product_name" rule.
+
+BOUNDING BOX RULES:
+- Preserve the exact bounding box of the associated image.
+- Preserve the exact bounding box of the product_name text.
+- Do NOT infer or approximate bounding boxes.
+
+────────────────────────────────────────
+PRODUCT NAME RULES (STRICT):
+────────────────────────────────────────
+
+- Extract product names exactly as they appear.
+- A product_name MAY span multiple consecutive lines.
+- If a product name continues onto the next line, concatenate those lines
+  in order and treat them as ONE product_name string.
+- Preserve internal line breaks using "\n".
+- Do NOT modify wording, punctuation, capitalization, or parentheses.
+- Only trim leading and trailing whitespace from the final concatenated name.
+
+────────────────────────────────────────
+ATTRIBUTE CAPTURE WINDOW (CRITICAL):
+────────────────────────────────────────
+
+- After detecting a product_name, scan ONLY the contiguous block of lines
+  immediately following it.
+- Stop scanning when:
+  a) a new product_name is encountered, OR
+  b) a clear section break is reached (e.g. blank line, page break, heading).
+- Only attributes found inside this block may be assigned to the product.
+
+ORDER CONFIRMATION ATTRIBUTES TO COLLECT (IF PRESENT)
+ - merchant name
+ - order number 
+ -currency_code
+ - delivery date
+ 
+
+PODUCT ATTRIBUTES TO COLLECT (IF PRESENT):
+- product_name
+- style number
+- availability
+- color
+- color code
+- size
+- season
+- description
+- material
+- certifications
+- country_of_origin
+- retail_price
+- ws price
+- RPR
+- quantity_ordered
+- units
+- totalL pieces
+- family
+- net price
+- unit price
+- list price
+- discount
+- total
+-
+
+ 
+
+ATTRIBUTE EXTRACTION RULES:
+- Map common label variants to the correct attribute
+  (e.g., "Style #", "SKU" → style_number; "WSP", "Wholesale" → ws_price).
+- Preserve values exactly as written (except trimming whitespace).
+- Do NOT normalize units, prices, or text.
+- If multiple values for the same attribute appear in the block,
+  use the first occurrence.
+- Merchant name might be on an image in the header or footer. 
+- If attribute labels appear without explicit keys (e.g., bare prices),
+  associate them ONLY if they appear directly below the product_name
+  and before any other product_name.
+
+────────────────────────────────────────
+DUPLICATION RULE:
+────────────────────────────────────────
+
+- If the same product_name appears multiple times, extract each occurrence
+  as a separate product entry.
+- Do NOT merge or deduplicate products.
+
+────────────────────────────────────────
+OUTPUT FORMAT (STRICT JSON ONLY):
+────────────────────────────────────────
+
 {
+  "SHIPPER":{
+  "merchant_name": "<string or null>",
+  "currency_code": "<string or null>",
+   "order_number: "<string or null>", 
+   "delivery_data": "<string or null>",
+
+  }
   "products": [
-{
-  "product_name": null,
-  "style_number": null,
-  "availability": null,
-  "color": null,
-  "color_code": null,
-  "size": null,
-  "description": null,
-  "material": null,
-  "certifications": null,
-  "country_of_origin": null,
-  "retail_price": null,
-  "ws_price": null,
-  "RPR": null,
-  "quantity_ordered": null,
-  "units": null,
-  "totalL_pieces": null,
-  "family": null,
-  "net_price": null,
-  "total": null
-}
+    {
+      "product_name": "<string or null>",
+      "availability": "<string or null>",
+      "color": "<string or null>",
+      "color_code": "<string or null>",
+      "size": "<string or null>",
+      "description": "<string or null>",
+      "material": "<string or null>",
+      "certifications": "<string or null>",
+      "country_of_origin": "<string or null>",
+      "retail_price": "<string or null>",
+      "ws_price": "<string or null>",
+      "RPR": "<string or null>",
+      "quantity_ordered": "<string or null>",
+      "style_id": "<string or null>",
+      "units": "<string or null>",
+      "unit_price": "<string or null>",
+      "totalL_pieces": "<string or null>",
+      "family": "<string or null>",
+      "net_price": "<string or null>",
+      "unit_price": "<string or null>",
+      "discount": "<string or null>",
+
+      "associated_image_bbox": {
+        "x0": "<number or null>",
+        "y0": "<number or null>",
+        "x1": "<number or null>",
+        "y1": "<number or null>"
+      },
+
+      "product_name_bbox": {
+        "x0": "<number or null>",
+        "y0": "<number or null>",
+        "x1": "<number or null>",
+        "y1": "<number or null>"
+      }
+    }
   ]
 }
- 
-Work step by step.
-1. Scan the entire pdf from page 0 to the last page to find the number of products on each page. Take your time. After finding one product name check for other product names to the right on the page. Be thorough scan from top down and from left to right 
-2. Scan the entire pdf from page 0 to the last page to find the names of the products.For each page scan for multiple products on the page.
-   Take your time. After finding one product name  check for other product names to the right the found name. Be thorough scan from top down and from left to right 
-3. Scan the pdf from page 0 to the last page to find the format of the SKU codes if they exist. For each page scan for multiple products on the page. After finding one product SKU check for other product SKU to the right of the page. Be thorough scan from top  down and from left to right 
-4. Find all product descriptions by finding the product names and the SKU code. 
 
-Double check your work.  
-
- 
-Finally output the product descriptions in a json. 
- 
- 
+────────────────────────────────────────
+FINAL VALIDATION (MANDATORY):
+────────────────────────────────────────
+- 
+- Each product object must contain ALL listed fields.
+- Fields not found directly below the product_name MUST be null,
+  except for description text explicitly allowed above the image.
+- Image fields MUST be null if no qualifying image is found.
+- Do NOT invent or infer data.
+- Do NOT include commentary or explanations.
+- Output JSON only.
+- NEVER write to a file with a .txt extension
+- The output file must have a JSON extenion
+- The output file name  must have the same name as the input pdf
