@@ -85,9 +85,10 @@ def build_product_request_dto(product: Product) -> Dict[str, Any]:
     excluded_fields = {"sender_email", "sender_name", "store_id"}
     
     # Build properties dict excluding supplier fields
+    # Keep all fields including None values to preserve field structure
     properties = {
         k: v for k, v in product.items()
-        if v is not None and k not in excluded_fields
+        if k not in excluded_fields
     }
     
     return properties

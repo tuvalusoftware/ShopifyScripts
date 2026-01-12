@@ -129,9 +129,9 @@ class Step3Util:
         raw_dict: Dict[str, Any] = cast(Dict[str, Any], raw_product)
         
         # Copy all fields from raw_product, preserving field names and values as-is
+        # Keep all fields including None values to preserve field structure
         for key, value in raw_dict.items():
-            if value is not None:
-                product_dict[key] = value
+            product_dict[key] = value
         
         return product_dict
     

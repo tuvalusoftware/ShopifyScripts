@@ -3,7 +3,7 @@
 import os
 import sys
 import time
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Dict, List, cast
 
@@ -95,8 +95,16 @@ def sync_images_to_s3(
                             s3_key,
                         )
                         
-                        # Construct S3 URL
-                        s3_url = f"s3://{s3_bucket}/{s3_key}"
+                        # Generate presigned URL (valid for 1 year by default)
+                        # This creates a clickable URL that opens the image in browser
+                        expiration_hours = int(os.getenv("S3_PRESIGNED_URL_EXPIRATION_HOURS", "8760"))  # Default: 1 year
+                        expiration = timedelta(hours=expiration_hours)
+                        
+                        s3_url = s3_client.generate_presigned_url(  # type: ignore
+                            "get_object",
+                            Params={"Bucket": s3_bucket, "Key": s3_key},
+                            ExpiresIn=int(expiration.total_seconds()),
+                        )
                         product_copy["extracted_image_s3_url"] = s3_url
                         sync_stats["total_images_synced"] += 1
                         

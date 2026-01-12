@@ -297,8 +297,8 @@ class DynamoServiceClient:
             # If ARCHIVE_BUCKET is not set, log warning but continue
             print(f"WARNING: Could not save payload to S3: {e}")
         
-        # Make POST request to /data/insert endpoint with multipart/form-data
-        url = f"{self._api_url}/data/insert"
+        # Make POST request to /data/import/oc endpoint with multipart/form-data
+        url = f"{self._api_url}/data/import/oc"
         # log the payload
         print(f"Payload: {payload}")
         print(f"URL: {url}")
@@ -445,8 +445,8 @@ class DynamoServiceClient:
             # If ARCHIVE_BUCKET is not set, log warning but continue
             print(f"WARNING: Could not save payload to S3: {e}")
         
-        # Make POST request to /data/insert endpoint with multipart/form-data
-        url = f"{self._api_url}/data/insert"
+        # Make POST request to /data/import/oc endpoint with multipart/form-data
+        url = f"{self._api_url}/data/import/oc"
         # log the payload
         print(f"Batch Payload: {len(products)} products")
         print(f"URL: {url}")
