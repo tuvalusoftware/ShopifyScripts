@@ -23,7 +23,7 @@ def build_supplier_dto(file_result: FileResult) -> Optional[SupplierDTO]:
     Build SupplierDTO from FileResult.
     
     Extracts supplier information from:
-    - FileResult.shipper (ShipperRaw): merchant_name, currency_code, delivery_data
+    - FileResult.shipper (ShipperRaw): merchant_name, currency_code, delivery_data, order_number
     - FileResult.products[0]: sender_email, sender_name (from first product)
     
     Args:
@@ -42,6 +42,7 @@ def build_supplier_dto(file_result: FileResult) -> Optional[SupplierDTO]:
         merchant_name = shipper_dict.get("merchant_name")
         currency_code = shipper_dict.get("currency_code")
         delivery_data = shipper_dict.get("delivery_data")
+        order_number = shipper_dict.get("order_number")
         
         if merchant_name:
             supplier["merchant"] = merchant_name
@@ -49,6 +50,8 @@ def build_supplier_dto(file_result: FileResult) -> Optional[SupplierDTO]:
             supplier["currency_code"] = currency_code
         if delivery_data:
             supplier["delivery_data"] = delivery_data
+        if order_number:
+            supplier["order_number"] = order_number
     
     # Extract sender info from first product (all products in same file share same sender)
     products = file_result.get("products")

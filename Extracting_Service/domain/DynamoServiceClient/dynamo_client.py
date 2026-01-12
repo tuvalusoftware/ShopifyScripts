@@ -39,6 +39,7 @@ SupplierDTO = TypedDict(
         'currency_code': Optional[str],
         'delivery_data': Optional[str],
         'products': Optional[List[Dict[str, Any]]],
+        'order_number': Optional[str],
     },
     total=False
 )
