@@ -208,6 +208,28 @@ class DynamoServiceClient:
             return "/data/import/oc"
         return "/data/import/linesheet"
     
+    def _transform_payload_for_linesheet(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Transform payload for linesheet endpoint by renaming sender_email to supplier_email.
+        
+        Args:
+            payload: The payload dictionary to transform
+            
+        Returns:
+            Transformed payload with sender_email renamed to supplier_email in supplier dict
+        """
+        # Create a deep copy to avoid modifying the original
+        transformed_payload = json.loads(json.dumps(payload))
+        
+        # Check if payload has supplier dict
+        if "supplier" in transformed_payload and isinstance(transformed_payload["supplier"], dict):
+            supplier_dict = transformed_payload["supplier"]
+            # Rename sender_email to supplier_email if it exists
+            if "sender_email" in supplier_dict:
+                supplier_dict["supplier_email"] = supplier_dict.pop("sender_email")
+        
+        return transformed_payload
+    
     def create_product(
         self,
         properties: Dict[str, Any],
@@ -304,6 +326,13 @@ class DynamoServiceClient:
                 "sample_products": [properties]
             }
         
+        # Determine endpoint based on order_number presence
+        endpoint = self._get_import_endpoint(supplier)
+        
+        # Transform payload for linesheet endpoint (rename sender_email to supplier_email)
+        if endpoint == "/data/import/linesheet":
+            payload = self._transform_payload_for_linesheet(payload)
+        
         # Save payload to S3 archive bucket for debugging (prod mode)
         try:
             payload_s3_path = self._save_payload_to_s3(payload, prefix="payload_single")
@@ -312,8 +341,6 @@ class DynamoServiceClient:
             # If ARCHIVE_BUCKET is not set, log warning but continue
             print(f"WARNING: Could not save payload to S3: {e}")
         
-        # Determine endpoint based on order_number presence
-        endpoint = self._get_import_endpoint(supplier)
         url = f"{self._api_url}{endpoint}"
         # log the payload
         print(f"Payload: {payload}")
@@ -453,6 +480,13 @@ class DynamoServiceClient:
                 "sample_products": products[:5]  # Return first 5 as sample
             }
         
+        # Determine endpoint based on order_number presence
+        endpoint = self._get_import_endpoint(supplier)
+        
+        # Transform payload for linesheet endpoint (rename sender_email to supplier_email)
+        if endpoint == "/data/import/linesheet":
+            payload = self._transform_payload_for_linesheet(payload)
+        
         # Save payload to S3 archive bucket for debugging (prod mode)
         try:
             payload_s3_path = self._save_payload_to_s3(payload, prefix="payload_batch")
@@ -461,8 +495,6 @@ class DynamoServiceClient:
             # If ARCHIVE_BUCKET is not set, log warning but continue
             print(f"WARNING: Could not save payload to S3: {e}")
         
-        # Determine endpoint based on order_number presence
-        endpoint = self._get_import_endpoint(supplier)
         url = f"{self._api_url}{endpoint}"
         # log the payload
         print(f"Batch Payload: {len(products)} products")
