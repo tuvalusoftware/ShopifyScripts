@@ -14,7 +14,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../.."))
 from utils.logger import get_logger
 from utils.directory_manager import DirectoryManager
 from step3_util import Step3Util
-from step3_vision_util import detect_file_type, process_pdf_with_vision
+from step3_vision_util import detect_file_type, process_pdf_with_vision, convert_xlsx_to_pdf
 
 # Setup logger
 logger = get_logger(__name__)
@@ -185,6 +185,9 @@ def execute(
         "product_creation_errors": None,
     }
     
+    # Track if we need to cleanup a temporary PDF file (converted from XLSX)
+    temp_pdf_path: Optional[str] = None
+    
     try:
         # ===== SIDE EFFECTS: Load external data =====
         # Load file metadata from file system
@@ -203,6 +206,23 @@ def execute(
         
         # ===== DETECT FILE TYPE AND ROUTE =====
         file_type = detect_file_type(file_path)
+        
+        # Convert XLSX to PDF if needed
+        if file_type == "xlsx":
+            logger.info(f"Detected XLSX file '{file_result['input_name']}', converting to PDF")
+            try:
+                # Get run directory from DirectoryManager
+                dir_manager = DirectoryManager.get_instance()
+                run_dir = dir_manager.get_run_dir()
+                
+                # Convert XLSX to PDF
+                temp_pdf_path = convert_xlsx_to_pdf(file_path, run_dir)
+                file_path = temp_pdf_path  # Use converted PDF for processing
+                file_type = "pdf"  # Update file type to PDF
+                logger.info(f"Successfully converted XLSX to PDF: {temp_pdf_path}")
+            except Exception as e:
+                logger.error(f"Failed to convert XLSX to PDF: {e}")
+                raise
         
         if file_type == "pdf":
             # ===== PDF PATH: Use Vision API =====
@@ -309,6 +329,16 @@ def execute(
         file_result["error"] = str(ex)
     
     finally:
+        # ===== SIDE EFFECTS: Cleanup temporary PDF file if it was converted from XLSX =====
+        if temp_pdf_path:
+            try:
+                temp_pdf = Path(temp_pdf_path)
+                if temp_pdf.exists():
+                    temp_pdf.unlink()
+                    logger.debug(f"Cleaned up temporary PDF file: {temp_pdf_path}")
+            except Exception as e:
+                logger.warning(f"Failed to cleanup temporary PDF file {temp_pdf_path}: {e}")
+        
         # ===== SIDE EFFECTS: Update timing metadata =====
         file_result["finished_at_utc"] = Step3Util.utc_now_iso()
         file_result["duration_seconds"] = round(time.time() - t0, 3)

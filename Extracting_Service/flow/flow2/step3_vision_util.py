@@ -22,20 +22,121 @@ logger = get_logger(__name__)
 
 def detect_file_type(file_path: str) -> str:
     """
-    Detect if file is PDF or other type.
+    Detect file type based on extension.
     
     Args:
         file_path: Path to file
         
     Returns:
-        "pdf" if file is PDF, "other" otherwise
+        "pdf" if file is PDF, "xlsx" if file is Excel, "other" otherwise
     """
     path = Path(file_path)
     ext = path.suffix.lower()
     
     if ext == ".pdf":
         return "pdf"
+    if ext in (".xlsx", ".xls"):
+        return "xlsx"
     return "other"
+
+
+def convert_xlsx_to_pdf(xlsx_path: str, output_dir: str) -> str:
+    """
+    Convert XLSX file to PDF format.
+    
+    Args:
+        xlsx_path: Path to input XLSX file
+        output_dir: Directory to save the converted PDF
+        
+    Returns:
+        Path to the converted PDF file
+        
+    Raises:
+        Exception: If conversion fails
+    """
+    try:
+        from openpyxl import load_workbook  # type: ignore
+        from reportlab.lib import colors  # type: ignore
+        from reportlab.lib.pagesizes import letter, A4  # type: ignore
+        from reportlab.lib.units import inch  # type: ignore
+        from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Spacer  # type: ignore
+    except ImportError as e:
+        raise ImportError(f"Required libraries for XLSX to PDF conversion not installed: {e}. Please install openpyxl and reportlab.")
+    
+    xlsx_file = Path(xlsx_path)
+    if not xlsx_file.exists():
+        raise FileNotFoundError(f"XLSX file not found: {xlsx_path}")
+    
+    # Load workbook
+    workbook = load_workbook(xlsx_path, data_only=True)
+    
+    # Generate output PDF path
+    pdf_filename = xlsx_file.stem + ".pdf"
+    pdf_path = Path(output_dir) / pdf_filename
+    
+    # Create PDF document
+    doc = SimpleDocTemplate(str(pdf_path), pagesize=letter)
+    story: List[Any] = []
+    
+    # Process each worksheet
+    for sheet_name in workbook.sheetnames:
+        worksheet = workbook[sheet_name]
+        
+        # Skip empty sheets
+        if worksheet.max_row == 0 or worksheet.max_column == 0:
+            continue
+        
+        # Extract data from worksheet
+        data: List[List[str]] = []
+        for row in worksheet.iter_rows(values_only=True):
+            row_data: List[str] = []
+            for cell_value in row:
+                # Convert cell value to string, handling None
+                if cell_value is None:
+                    row_data.append("")
+                else:
+                    row_data.append(str(cell_value))
+            data.append(row_data)
+        
+        if not data:
+            continue
+        
+        # Create table from data
+        table = Table(data)
+        
+        # Style the table
+        table.setStyle(TableStyle([
+            # Header row styling
+            ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 10),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            # Data rows styling
+            ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+            ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+            ('FONTSIZE', (0, 1), (-1, -1), 9),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black),
+            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.lightgrey]),
+        ]))
+        
+        # Add sheet name as heading
+        from reportlab.platypus import Paragraph  # type: ignore
+        from reportlab.lib.styles import getSampleStyleSheet  # type: ignore
+        styles = getSampleStyleSheet()
+        story.append(Paragraph(f"<b>Sheet: {sheet_name}</b>", styles['Heading2']))
+        story.append(Spacer(1, 0.2 * inch))
+        
+        # Add table to story
+        story.append(table)
+        story.append(Spacer(1, 0.5 * inch))
+    
+    # Build PDF
+    doc.build(story)
+    
+    logger.info(f"Converted XLSX to PDF: {xlsx_path} -> {pdf_path}")
+    return str(pdf_path)
 
 
 def transform_vision_product_to_flow2_product(
