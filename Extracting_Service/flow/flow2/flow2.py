@@ -18,7 +18,7 @@ from step2_collect_files import execute as step2_collect_files
 from step3_process_file_with_llm import execute as step3_process_file
 from step3_process_file_with_llm import FileResult, Step3Result
 from step4_create_products_to_dynamo import execute as step4_create_products
-from step5_extract_images import execute as step5_extract_images
+# from step5_extract_images import execute as step5_extract_images  # Disabled: images already processed in step3 via Vision API
 from step6_delete_files import execute as step6_delete_files
 from step6_delete_files import Step6Result
 
@@ -49,7 +49,7 @@ class State:
         # Step 4: Create products via Dynamo
         self.step4: Optional[Dict[str, Any]] = None
         
-        # Step 5: Extract images from PDFs
+        # Step 5: Extract images from PDFs (disabled - images processed in step3 via Vision API)
         self.step5: Optional[Dict[str, Any]] = None
         
         # Step 6: Delete files
@@ -99,8 +99,9 @@ class State:
             return True
         if self.step4 and not self.step4.get("success"):
             return True
-        if self.step5 and not self.step5.get("success"):
-            return True
+        # Step 5 disabled - images processed in step3 via Vision API
+        # if self.step5 and not self.step5.get("success"):
+        #     return True
         if self.step6 and not self.step6.get("success"):
             return True
         return any(not r.get("success", True) for r in self.step3)
@@ -226,33 +227,16 @@ def main() -> int:
     total_products_extracted = sum(r.get("products_extracted", 0) for r in state.file_results)
     
     # Step 5: Extract images from PDFs
+    # DISABLED: Images are already extracted and uploaded to S3 in step3 via Vision API
+    # For PDF files processed with Vision API, images are matched to products and uploaded to S3
+    # For non-PDF files, images are not extracted (step5 previously skipped non-PDF files anyway)
     logger.info(f"\n=== Step 5: Extract Images ===")
-    state.step5 = step5_extract_images(
-        file_results=state.file_results,
-        attachment_dir=args.attachment_dir,
-        run_dir=state.run_dir,
-    )
+    logger.info("ℹ Step 5 skipped - images already processed in step3 via Vision API")
+    state.step5 = None
     
-    step5_result: Dict[str, Any] = cast(Dict[str, Any], state.step5.get("step_result", {})) if state.step5 else {}
-    if state.step5:
-        if not state.step5.get("success"):
-            logger.error(f"ERROR extracting images: {state.step5.get('error')}")
-            # Continue execution even if image extraction fails
-        else:
-            if step5_result.get("status") == "ok":
-                logger.info(f"✓ PDFs processed: {step5_result.get('total_pdfs_processed', 0)}")
-                logger.info(f"✓ Images extracted: {step5_result.get('total_images_extracted', 0)}")
-                canary_counts = cast(Dict[str, int], step5_result.get("canary_counts", {}))
-                logger.info(
-                    f"  Position counts: ABOVE={canary_counts.get('ABOVE', 0)}, "
-                    f"LEFT={canary_counts.get('LEFT', 0)}, NONE={canary_counts.get('NONE', 0)}"
-                )
-            elif step5_result.get("status") == "skipped":
-                logger.info(f"ℹ Image extraction skipped: {step5_result.get('error', 'Unknown reason')}")
-    
-    # Update file_results with step5 results
-    file_results_updated = step5_result.get("file_results_updated", state.file_results)
-    state.file_results = cast(List[FileResult], file_results_updated)
+    # No need to update file_results - step3 already includes images for PDF files
+    # file_results_updated = step5_result.get("file_results_updated", state.file_results)
+    # state.file_results = cast(List[FileResult], file_results_updated)
     
     # Step 4: Create products via Dynamo
     logger.info(f"\n=== Step 4: Create Products ===")

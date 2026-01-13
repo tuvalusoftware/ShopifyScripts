@@ -1,0 +1,41 @@
+=== Flow1 started: Mon Jan 12 19:50:56 UTC 2026 ===
+Python: /usr/local/bin/python3
+Script: /app/flow/flow1/flow1.py
+Output directory: /app/data
+Bucket: s3://pipe-and-ro-email/exports/raw_emails/
+AWS Region: ap-southeast-1
+2026-01-12 19:50:57 [INFO] __main__: === S3 EML Processing Started: 2026-01-12T19:50:57.135478 ===
+2026-01-12 19:50:57 [INFO] __main__: S3 Bucket: pipe-and-ro-email
+2026-01-12 19:50:57 [INFO] __main__: S3 Prefix: exports/raw_emails
+2026-01-12 19:50:57 [INFO] __main__: AWS Region: ap-southeast-1
+2026-01-12 19:50:57 [INFO] __main__: Output Directory: /app/data
+2026-01-12 19:50:57 [INFO] __main__: Temp Directory: /app/data/temp_eml_downloads
+2026-01-12 19:50:57 [INFO] __main__: Delete After Process: False
+2026-01-12 19:50:57 [INFO] __main__: 
+=== Step 1: Initialize S3 Client ===
+2026-01-12 19:50:57 [INFO] __main__: ✓ S3 client initialized
+2026-01-12 19:50:57 [INFO] __main__: 
+=== Step 2: List EML Files ===
+2026-01-12 19:50:57 [INFO] __main__: Scanning S3://pipe-and-ro-email/exports/raw_emails for .eml files...
+2026-01-12 19:50:57 [INFO] __main__: Found 1 .eml file(s) to process
+2026-01-12 19:50:57 [INFO] __main__: 
+[1/1] Processing: msg20260112_191524_0001.eml
+2026-01-12 19:50:57 [INFO] __main__:   === Step 3: Download EML File ===
+2026-01-12 19:50:58 [INFO] __main__:   ✓ Downloaded: exports/raw_emails/msg20260112_191524_0001.eml
+2026-01-12 19:50:58 [INFO] __main__:   === Step 4: Parse EML File ===
+2026-01-12 19:50:58 [INFO] __main__:   ✓ Processed: RITA
+2026-01-12 19:50:58 [INFO] __main__:   ℹ Skipped archiving (DELETE_EML_AFTER_PROCESS=false): exports/raw_emails/msg20260112_191524_0001.eml
+2026-01-12 19:50:58 [INFO] __main__: 
+=== Step 7: Write JSON Output ===
+2026-01-12 19:50:58 [INFO] __main__: ✓ Wrote /app/data/emails.json
+2026-01-12 19:50:58 [INFO] __main__: 
+=== EML Processing Complete ===
+2026-01-12 19:50:58 [INFO] __main__: Processed: 1
+2026-01-12 19:50:58 [INFO] __main__: Failed: 0
+2026-01-12 19:50:58 [INFO] __main__: Total records: 1
+2026-01-12 19:50:58 [INFO] __main__: 
+=== Step 6: Extract Products ===
+2026-01-12 19:50:58 [INFO] step6_extract_products: Created sender mapping file: /app/data/extraction_outputs/sender_mapping.json
+2026-01-12 19:55:15 [ERROR] __main__: ERROR: Extraction failed with exit code 1
+2026-01-12 19:55:15 [INFO] __main__: See detailed logs in: /app/data/extraction_outputs/logs/extraction_20260112_195058.log
+ERROR: Flow1 failed with exit code 0

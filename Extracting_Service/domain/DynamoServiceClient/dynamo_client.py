@@ -40,6 +40,7 @@ SupplierDTO = TypedDict(
         'delivery_data': Optional[str],
         'products': Optional[List[Dict[str, Any]]],
         'order_number': Optional[str],
+        'pdf_type': Optional[str],  # "linesheet" or "order_confirmation"
     },
     total=False
 )
@@ -196,15 +197,15 @@ class DynamoServiceClient:
     
     def _get_import_endpoint(self, supplier: Optional[SupplierDTO] = None) -> str:
         """
-        Determine the import endpoint based on order_number presence.
+        Determine the import endpoint based on pdf_type.
         
         Args:
             supplier: Optional supplier information DTO
             
         Returns:
-            Endpoint path: "/data/import/oc" if order_number exists, "/data/import/linesheet" otherwise
+            Endpoint path: "/data/import/oc" if pdf_type is "order_confirmation", "/data/import/linesheet" otherwise
         """
-        if supplier and supplier.get("order_number"):
+        if supplier and supplier.get("pdf_type") == "order_confirmation":
             return "/data/import/oc"
         return "/data/import/linesheet"
     
@@ -309,7 +310,14 @@ class DynamoServiceClient:
                 "products": [properties]
             }
         
-        # Check if DEV_TEST_SCHEMA flag is enabled
+        # Determine endpoint based on order_number presence
+        endpoint = self._get_import_endpoint(supplier)
+        
+        # Transform payload for linesheet endpoint (extract supplier content, rename sender_email to supplier_email)
+        if endpoint == "/data/import/linesheet":
+            payload = self._transform_payload_for_linesheet(payload)
+        
+        # Check if DEV_TEST_SCHEMA flag is enabled (after transform to log final payload)
         dev_test_schema = os.getenv("DEV_TEST_SCHEMA", "").lower() in ("true", "1", "yes", "on")
         
         if dev_test_schema:
@@ -318,7 +326,8 @@ class DynamoServiceClient:
             print("=" * 80)
             print("DEV_TEST_SCHEMA is enabled - Skipping API call")
             print("=" * 80)
-            print("Product JSON payload:")
+            print(f"Endpoint: {endpoint}")
+            print("Product JSON payload (after transform):")
             print(json_payload)
             print("=" * 80)
             
@@ -332,13 +341,6 @@ class DynamoServiceClient:
                 "errors": [],
                 "sample_products": [properties]
             }
-        
-        # Determine endpoint based on order_number presence
-        endpoint = self._get_import_endpoint(supplier)
-        
-        # Transform payload for linesheet endpoint (extract supplier content, rename sender_email to supplier_email)
-        if endpoint == "/data/import/linesheet":
-            payload = self._transform_payload_for_linesheet(payload)
         
         # Save payload to S3 archive bucket for debugging (prod mode)
         try:
@@ -463,7 +465,14 @@ class DynamoServiceClient:
                 "products": products
             }
         
-        # Check if DEV_TEST_SCHEMA flag is enabled
+        # Determine endpoint based on order_number presence
+        endpoint = self._get_import_endpoint(supplier)
+        
+        # Transform payload for linesheet endpoint (extract supplier content, rename sender_email to supplier_email)
+        if endpoint == "/data/import/linesheet":
+            payload = self._transform_payload_for_linesheet(payload)
+        
+        # Check if DEV_TEST_SCHEMA flag is enabled (after transform to log final payload)
         dev_test_schema = os.getenv("DEV_TEST_SCHEMA", "").lower() in ("true", "1", "yes", "on")
         
         if dev_test_schema:
@@ -472,7 +481,8 @@ class DynamoServiceClient:
             print("=" * 80)
             print("DEV_TEST_SCHEMA is enabled - Skipping API call")
             print("=" * 80)
-            print(f"Batch Product JSON payload ({len(products)} products):")
+            print(f"Endpoint: {endpoint}")
+            print(f"Batch Product JSON payload ({len(products)} products, after transform):")
             print(json_payload)
             print("=" * 80)
             
@@ -486,13 +496,6 @@ class DynamoServiceClient:
                 "errors": [],
                 "sample_products": products[:5]  # Return first 5 as sample
             }
-        
-        # Determine endpoint based on order_number presence
-        endpoint = self._get_import_endpoint(supplier)
-        
-        # Transform payload for linesheet endpoint (extract supplier content, rename sender_email to supplier_email)
-        if endpoint == "/data/import/linesheet":
-            payload = self._transform_payload_for_linesheet(payload)
         
         # Save payload to S3 archive bucket for debugging (prod mode)
         try:

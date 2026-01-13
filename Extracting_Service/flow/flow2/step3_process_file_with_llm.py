@@ -4,7 +4,7 @@ import os
 import sys
 import time
 from pathlib import Path
-from typing import Dict, List, Literal, Optional, TypedDict, cast
+from typing import Any, Dict, List, Literal, Optional, TypedDict, cast
 
 from openai import OpenAI
 
@@ -12,7 +12,9 @@ from openai import OpenAI
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../.."))
 
 from utils.logger import get_logger
+from utils.directory_manager import DirectoryManager
 from step3_util import Step3Util
+from step3_vision_util import detect_file_type, process_pdf_with_vision
 
 # Setup logger
 logger = get_logger(__name__)
@@ -199,45 +201,106 @@ def execute(
         path = Path(file_path)
         file_result["input_sha256"] = Step3Util.sha256_file(path)
         
-        # ===== SIDE EFFECTS: API calls =====
-        # Upload file to OpenAI
-        file_id = util.upload_file(path, purpose=upload_purpose)
-        file_result["uploaded_file_id"] = file_id
+        # ===== DETECT FILE TYPE AND ROUTE =====
+        file_type = detect_file_type(file_path)
         
-        # Call OpenAI API
-        response_text = util.call_responses_with_file(
-            model=model,
-            prompt=prompt,
-            file_id=file_id,
-            filename=file_result["input_name"],
-            max_output_tokens=max_output_tokens,
-        )
-        
-        # Log raw LLM response
-        logger.info(f"Raw LLM response for file '{file_result['input_name']}':\n{response_text}")
-        
-        # ===== PURE LOGIC: Parse and transform data =====
-        # Parse shipper from API response (pure function)
-        shipper_raw = Step3Util.get_shipper_from_response(response_text)
-        if shipper_raw:
-            file_result["shipper"] = cast(ShipperRaw, shipper_raw)
-        
-        # Parse products from API response (pure function)
-        products_raw = Step3Util.parse_products_from_response(response_text)
-        
-        # Enrich products with sender info (pure function)
-        enriched_products_raw = Step3Util.enrich_products_with_sender_info(
-            products=products_raw,
-            filename=file_result["input_name"],
-            sender_mapping=sender_mapping
-        )
-        # Convert to Product type
-        enriched_products: List[Product] = [cast(Product, p) for p in enriched_products_raw]
-        
-        # Update result with parsed data
-        file_result["products_extracted"] = len(enriched_products)
-        if enriched_products:
-            file_result["products"] = enriched_products
+        if file_type == "pdf":
+            # ===== PDF PATH: Use Vision API =====
+            logger.info(f"Detected PDF file '{file_result['input_name']}', using Vision API")
+            
+            # Get run directory from DirectoryManager
+            dir_manager = DirectoryManager.get_instance()
+            run_dir = dir_manager.get_run_dir()
+            
+            # Process PDF with Vision API
+            vision_result = process_pdf_with_vision(
+                pdf_path=file_path,
+                out_dir=run_dir,
+                create_run_subdir=False,  # Use existing run_dir
+                doc_type="auto",
+            )
+            
+            # Extract products from Vision API result
+            vision_products: List[Dict[str, Any]] = vision_result.get("products", [])
+            
+            # Enrich products with sender info (pure function)
+            enriched_products_raw = Step3Util.enrich_products_with_sender_info(
+                products=vision_products,
+                filename=file_result["input_name"],
+                sender_mapping=sender_mapping
+            )
+            # Convert to Product type
+            enriched_products: List[Product] = [cast(Product, p) for p in enriched_products_raw]
+            
+            # Extract shipper info if available (from order_confirmation metadata)
+            # Vision API may include order metadata in products
+            if vision_result.get("pdf_type") == "order_confirmation":
+                # Try to extract shipper info from first product's _order_metadata
+                if enriched_products and enriched_products[0].get("_order_metadata"):
+                    order_metadata_raw = enriched_products[0].get("_order_metadata")
+                    if isinstance(order_metadata_raw, dict):
+                        order_metadata = cast(Dict[str, Any], order_metadata_raw)
+                        shipper_info: Dict[str, Any] = {}
+                        if "merchant_name" in order_metadata:
+                            shipper_info["merchant_name"] = order_metadata.get("merchant_name")
+                        if "currency_code" in order_metadata:
+                            shipper_info["currency_code"] = order_metadata.get("currency_code")
+                        if "order_number" in order_metadata:
+                            shipper_info["order_number"] = order_metadata.get("order_number")
+                        if "delivery_data" in order_metadata:
+                            shipper_info["delivery_data"] = order_metadata.get("delivery_data")
+                        if shipper_info:
+                            file_result["shipper"] = cast(ShipperRaw, shipper_info)
+            
+            # Update result with parsed data
+            file_result["products_extracted"] = len(enriched_products)
+            if enriched_products:
+                file_result["products"] = enriched_products
+            
+            logger.info(f"Vision API extracted {len(enriched_products)} products from PDF")
+            
+        else:
+            # ===== NON-PDF PATH: Use Responses API (existing logic) =====
+            logger.info(f"Detected non-PDF file '{file_result['input_name']}', using Responses API")
+            
+            # Upload file to OpenAI
+            file_id = util.upload_file(path, purpose=upload_purpose)
+            file_result["uploaded_file_id"] = file_id
+            
+            # Call OpenAI API
+            response_text = util.call_responses_with_file(
+                model=model,
+                prompt=prompt,
+                file_id=file_id,
+                filename=file_result["input_name"],
+                max_output_tokens=max_output_tokens,
+            )
+            
+            # Log raw LLM response
+            logger.info(f"Raw LLM response for file '{file_result['input_name']}':\n{response_text}")
+            
+            # ===== PURE LOGIC: Parse and transform data =====
+            # Parse shipper from API response (pure function)
+            shipper_raw = Step3Util.get_shipper_from_response(response_text)
+            if shipper_raw:
+                file_result["shipper"] = cast(ShipperRaw, shipper_raw)
+            
+            # Parse products from API response (pure function)
+            products_raw = Step3Util.parse_products_from_response(response_text)
+            
+            # Enrich products with sender info (pure function)
+            enriched_products_raw = Step3Util.enrich_products_with_sender_info(
+                products=products_raw,
+                filename=file_result["input_name"],
+                sender_mapping=sender_mapping
+            )
+            # Convert to Product type
+            enriched_products: List[Product] = [cast(Product, p) for p in enriched_products_raw]
+            
+            # Update result with parsed data
+            file_result["products_extracted"] = len(enriched_products)
+            if enriched_products:
+                file_result["products"] = enriched_products
         
         file_result["status"] = "ok"
         

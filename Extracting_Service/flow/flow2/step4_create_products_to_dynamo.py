@@ -24,7 +24,7 @@ def build_supplier_dto(file_result: FileResult) -> Optional[SupplierDTO]:
     
     Extracts supplier information from:
     - FileResult.shipper (ShipperRaw): merchant_name, currency_code, delivery_data, order_number
-    - FileResult.products[0]: sender_email, sender_name (from first product)
+    - FileResult.products[0]: sender_email, sender_name, pdf_type (from first product)
     
     Args:
         file_result: FileResult from step3 containing shipper and products
@@ -53,7 +53,7 @@ def build_supplier_dto(file_result: FileResult) -> Optional[SupplierDTO]:
         if order_number:
             supplier["order_number"] = order_number
     
-    # Extract sender info from first product (all products in same file share same sender)
+    # Extract sender info and pdf_type from first product (all products in same file share same sender and pdf_type)
     products = file_result.get("products")
     if products and len(products) > 0:
         first_product = products[0]
@@ -61,11 +61,14 @@ def build_supplier_dto(file_result: FileResult) -> Optional[SupplierDTO]:
         product_dict = cast(Dict[str, Any], first_product)
         sender_email = product_dict.get("sender_email")
         sender_name = product_dict.get("sender_name")
+        pdf_type = product_dict.get("pdf_type")
         
         if sender_email:
             supplier["sender_email"] = sender_email
         if sender_name:
             supplier["sender_name"] = sender_name
+        if pdf_type:
+            supplier["pdf_type"] = pdf_type
     
     # Return None if supplier dict is empty, otherwise return supplier
     return supplier if supplier else None

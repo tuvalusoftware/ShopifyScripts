@@ -1,0 +1,21 @@
+=== Flow1 started: Mon Jan 12 20:05:01 UTC 2026 ===
+Python: /usr/local/bin/python3
+Script: /app/flow/flow1/flow1.py
+Output directory: /app/data
+Bucket: s3://pipe-and-ro-email/exports/raw_emails/
+AWS Region: ap-southeast-1
+2026-01-12 20:05:01 [INFO] __main__: === S3 EML Processing Started: 2026-01-12T20:05:01.457997 ===
+2026-01-12 20:05:01 [INFO] __main__: S3 Bucket: pipe-and-ro-email
+2026-01-12 20:05:01 [INFO] __main__: S3 Prefix: exports/raw_emails
+2026-01-12 20:05:01 [INFO] __main__: AWS Region: ap-southeast-1
+2026-01-12 20:05:01 [INFO] __main__: Output Directory: /app/data
+2026-01-12 20:05:01 [INFO] __main__: Temp Directory: /app/data/temp_eml_downloads
+2026-01-12 20:05:01 [INFO] __main__: Delete After Process: False
+2026-01-12 20:05:01 [INFO] __main__: 
+=== Step 1: Initialize S3 Client ===
+2026-01-12 20:05:01 [INFO] __main__: ✓ S3 client initialized
+2026-01-12 20:05:01 [INFO] __main__: 
+=== Step 2: List EML Files ===
+2026-01-12 20:05:01 [INFO] __main__: Scanning S3://pipe-and-ro-email/exports/raw_emails for .eml files...
+2026-01-12 20:05:01 [INFO] __main__: No .eml files found in S3.
+=== Flow1 finished: Mon Jan 12 20:05:01 UTC 2026 ===
