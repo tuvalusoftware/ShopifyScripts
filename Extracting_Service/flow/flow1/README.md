@@ -12,7 +12,7 @@ The flow consists of 7 sequential steps, each implemented as a separate module:
 2. **Step 2: List EML Files** (`step2_list_eml.py`)
 3. **Step 3: Download EML** (`step3_download_eml.py`)
 4. **Step 4: Parse EML** (`step4_parse_eml.py`)
-5. **Step 5: Delete EML** (`step5_delete_eml.py`)
+5. **Step 5: Archive EML** (`step5_archive_eml.py`)
 6. **Step 6: Extract Products** (`step6_extract_products.py`)
 7. **Step 7: Write Output** (`step7_write_output.py`)
 
@@ -24,7 +24,7 @@ The main orchestration file (`flow1.py`) coordinates these steps and manages the
 - Batch processing of multiple EML files
 - Email parsing with attachment extraction
 - Attachment saving with prefix-based naming
-- Optional S3 file deletion after successful processing
+- Optional S3 file archiving to archive bucket after successful processing
 - Integration with Flow 2 for product extraction from attachments
 - Sender mapping file generation for product extraction
 - Comprehensive JSON output with processing statistics
@@ -39,7 +39,8 @@ The main orchestration file (`flow1.py`) coordinates these steps and manages the
 - **AWS region**: AWS region for S3 access
 - **Output directory**: Base directory for all output files
 - **Extraction prompt file**: Optional prompt file for Flow 2 product extraction
-- **Configuration flags**: Enable/disable extraction, enable/disable S3 deletion
+- **Configuration flags**: Enable/disable extraction, enable/disable S3 archiving
+- **Archive bucket**: S3 bucket for archiving processed EML files
 
 ### Processing Flow
 
@@ -49,7 +50,7 @@ The main orchestration file (`flow1.py`) coordinates these steps and manages the
    - **Download**: Downloads EML file from S3 to temporary local directory
    - **Parse**: Parses EML file to extract email metadata (subject, sender, body, attachments)
    - **Save Attachments**: Saves email attachments to attachments directory with prefix-based naming
-   - **Delete**: Optionally deletes processed EML file from S3
+   - **Archive**: Optionally archives processed EML file to archive bucket (copies to archive bucket, then deletes from source bucket)
    - **Cleanup**: Removes temporary downloaded file
 4. **Output Writing**: Aggregates all processed email records into JSON output file (executes after all files are processed)
 5. **Product Extraction** (optional): If enabled, calls Flow 2 to process attachments and extract products (executes after output writing, uses email records to create sender mapping)
@@ -100,14 +101,16 @@ Per-file result dictionary:
   - `eml_path`: S3 URI path
 - `error`: Error message if parsing failed
 
-### Step 5 Output (`step5_delete_eml`)
+### Step 5 Output (`step5_archive_eml`)
 
 Per-file result dictionary:
 
-- `success`: Boolean indicating deletion success
-- `skipped`: Boolean indicating if deletion was skipped (only present when skipped=True)
-- `s3_key`: S3 object key that was deleted (only present when skipped=True)
-- `error`: Error message if deletion failed
+- `success`: Boolean indicating archiving success
+- `archived_key`: S3 object key in archive bucket (present when archiving succeeded)
+- `delete_warning`: Warning message if archive succeeded but deletion from source bucket failed (only present when deletion failed)
+- `skipped`: Boolean indicating if archiving was skipped (only present when skipped=True)
+- `s3_key`: S3 object key that was skipped (only present when skipped=True)
+- `error`: Error message if archiving failed
 
 ### Step 6 Output (`step6_extract_products`)
 
@@ -157,7 +160,7 @@ flow1/
 ├── step2_list_eml.py           # List EML files from S3
 ├── step3_download_eml.py       # Download EML file from S3
 ├── step4_parse_eml.py          # Parse EML file and extract data
-├── step5_delete_eml.py        # Delete EML file from S3
+├── step5_archive_eml.py        # Archive EML file to S3 archive bucket
 ├── step6_extract_products.py   # Trigger Flow 2 for product extraction
 ├── step7_write_output.py       # Write aggregated JSON output
 └── README.md                   # This file
@@ -178,7 +181,8 @@ flow1/
 - `AWS_REGION`: AWS region (default: `ap-southeast-1`)
 - `OUTPUT_DIR`: Base output directory (default: `.`)
 - `TEMP_DIR`: Temporary download directory name (default: `temp_eml_downloads`)
-- `DELETE_EML_AFTER_PROCESS`: Enable S3 deletion after processing (default: `true`)
+- `DELETE_EML_AFTER_PROCESS`: Enable S3 archiving after processing (default: `true`)
+- `ARCHIVE_BUCKET`: S3 bucket name for archiving EML files (required when `DELETE_EML_AFTER_PROCESS=true`)
 - `ENABLE_EXTRACTION`: Enable product extraction via Flow 2 (default: `false`)
 - `EXTRACTION_PROMPT_FILE`: Path to prompt file for Flow 2 extraction
 - `EXTRACTION_OUT_DIR`: Output directory for extraction results (optional)
@@ -211,7 +215,7 @@ The flow is executed via the main `flow1.py` script. Configuration is provided t
 - Step failures are tracked in result dictionaries with `success` boolean and `error` message
 - Per-file processing errors are captured without stopping the entire flow
 - Failed files are counted but processing continues for remaining files
-- S3 deletion failures are tracked separately from processing failures
+- S3 archiving/deletion failures are tracked separately from processing failures
 - Exit codes: 0 for success, 1 for errors
 - Temporary files are cleaned up even if processing fails
 

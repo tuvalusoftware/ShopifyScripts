@@ -6,13 +6,14 @@ Flow 2 is an orchestration flow that extracts product information from linesheet
 
 ## Architecture
 
-The flow consists of 5 sequential steps, each implemented as a separate module:
+The flow consists of 6 sequential steps, each implemented as a separate module:
 
 1. **Step 1: Initialize** (`step1_init.py`)
 2. **Step 2: Collect Files** (`step2_collect_files.py`)
 3. **Step 3: Process Files** (`step3_process_file_with_llm.py`)
-4. **Step 4: Create Products** (`step4_create_products_to_dynamo.py`)
-5. **Step 6: Delete Files** (`step6_delete_files.py`)
+4. **Step 5: Extract Images** (`step5_extract_images.py`)
+5. **Step 4: Create Products** (`step4_create_products_to_dynamo.py`)
+6. **Step 6: Delete Files** (`step6_delete_files.py`)
 
 The main orchestration file (`flow2.py`) coordinates these steps and manages the execution flow.
 
@@ -24,6 +25,9 @@ The main orchestration file (`flow2.py`) coordinates these steps and manages the
 - OpenAI file upload and Responses API integration
 - Automatic product extraction from model responses
 - Sender information enrichment based on filename prefix mapping
+- Image extraction from PDFs using bounding box coordinates
+- Canary detection for image positioning (ABOVE, LEFT, NONE)
+- Optional S3 sync for extracted images with presigned URLs
 - Optional product creation via DynamoServiceClient API
 - Optional file deletion after successful processing
 - Comprehensive metadata tracking and logging
@@ -45,21 +49,30 @@ The main orchestration file (`flow2.py`) coordinates these steps and manages the
    - Calculates SHA256 hash
    - Uploads file to OpenAI
    - Calls Responses API with prompt and file
-   - Parses JSON products from response
+   - Parses JSON products and shipper information from response
    - Enriches products with sender information (if sender mapping file provided)
-4. **Product Creation**: For each extracted product:
+4. **Image Extraction**: For each PDF file with extracted products:
+   - Extracts images from PDF pages based on product bounding box coordinates
+   - Detects image position relative to product name (ABOVE, LEFT, NONE)
+   - Saves extracted images to local `images/` directory
+   - Optionally syncs images to S3 bucket and generates presigned URLs
+   - Updates products with image metadata (extracted_image_name, page, position, S3 URLs)
+5. **Product Creation**: For each extracted product:
    - Converts product data to properties format
-   - Calls DynamoServiceClient API to create product
+   - Calls DynamoServiceClient API to create product (batch API)
    - Tracks success/error counts
-5. **File Deletion**: Optionally deletes successfully processed files if deletion is enabled
+6. **File Deletion**: Optionally deletes successfully processed files if deletion is enabled
 
 ### Output Data
 
 - **Run directory**: Created under base output directory (from `OUTPUT_DIR` env var or `--out_dir` argument)
 - **Responses directory**: Subdirectory for response files (currently not written to disk)
+- **Images directory**: Subdirectory containing extracted images from PDFs (created by step5)
 - **Processing results**: Stored in memory and logged, including:
   - File processing statistics
   - Product extraction and creation counts
+  - Image extraction statistics (PDFs processed, images extracted, position counts)
+  - S3 sync statistics (if enabled)
   - Per-file detailed results
 
 ## Data Interface
@@ -98,10 +111,39 @@ Per-file result dictionary:
 - `response_path`: Path to response file (currently None, not written to disk)
 - `products_extracted`: Number of products extracted
 - `products`: List of extracted product dictionaries (enriched with sender info if mapping provided)
+- `shipper`: Shipper information dictionary (merchant_name, currency_code, order_number, delivery_data)
 - `products_created_success`: Number of products successfully created (added by step4)
 - `products_created_error`: Number of products failed to create (added by step4)
 - `product_creation_errors`: List of error messages (added by step4)
 - `error`: Error message if processing failed
+
+**Product dictionary fields** (after step3):
+
+- Standard product fields: `product_name`, `style_number`, `availability`, `color`, `color_code`, `size`, `season`, `description`, `material`, `certifications`, `country_of_origin`, `retail_price`, `ws_price`, `RPR`, `quantity_ordered`, `style_id`, `units`, `unit_price`, `totalL_pieces`, `family`, `net_price`, `list_price`, `discount`, `total`
+- Bounding box fields: `associated_image_bbox`, `product_name_bbox`
+- Enrichment fields: `store_id`, `sender_email`, `sender_name` (added by step3 if sender mapping provided)
+- Image fields: `extracted_image_name`, `extracted_image_page`, `extracted_image_position`, `images` (added by step5)
+
+### Step 5 Output (`step5_extract_images`)
+
+- `status`: Step status (`pending`, `ok`, `skipped`, `error`)
+- `started_at_utc`: Step start time (ISO format)
+- `finished_at_utc`: Step end time (ISO format)
+- `duration_seconds`: Step duration
+- `total_pdfs_processed`: Number of PDF files processed
+- `total_images_extracted`: Total number of images extracted
+- `canary_counts`: Dictionary with position counts:
+  - `ABOVE`: Images found above product name
+  - `LEFT`: Images found to the left of product name
+  - `NONE`: No image found
+- `file_results_updated`: Updated file results with image metadata:
+  - Products enriched with `extracted_image_name`, `extracted_image_page`, `extracted_image_position`
+  - Products enriched with `images` array (S3 URLs if S3 sync enabled)
+- `s3_sync_enabled`: Boolean indicating if S3 sync was performed
+- `total_images_synced`: Number of images successfully synced to S3
+- `failed_sync_count`: Number of images that failed to sync
+- `s3_bucket`: S3 bucket name used (if sync enabled)
+- `error`: Error message if step failed
 
 ### Step 4 Output (`step4_create_products_to_dynamo`)
 
@@ -117,6 +159,8 @@ Per-file result dictionary:
   - `products_created_error`: Per-file error count
   - `product_creation_errors`: List of error messages
 - `error`: Error message if step failed
+
+Note: Step 4 executes after Step 5, so products already contain image metadata from step5.
 
 ### Step 6 Output (`step6_delete_files`)
 
@@ -136,6 +180,9 @@ flow2/
 ├── step1_init.py                   # Initialize clients and directories
 ├── step2_collect_files.py          # Collect files from directory
 ├── step3_process_file_with_llm.py # Process single file (upload, extract, enrich)
+├── step3_util.py                   # Utility class for step3 (parsing, enrichment)
+├── step5_extract_images.py         # Extract images from PDFs and sync to S3
+├── step5_util.py                   # Utility functions for image extraction
 ├── step4_create_products_to_dynamo.py # Create products via Dynamo API
 ├── step6_delete_files.py           # Delete processed files (optional)
 └── README.md                       # This file
@@ -144,8 +191,10 @@ flow2/
 ## Dependencies
 
 - OpenAI Python SDK: For file uploads and Responses API
+- boto3: For S3 operations (image sync)
 - DynamoServiceClient: For product creation (optional, from `domain/DynamoServiceClient`)
 - DirectoryManager: For directory management (from `flow/utils/directory_manager`)
+- S3Utils: For S3 bucket management (from `flow/utils/s3_utils`)
 - Logger: For logging (from `flow/utils/logger`)
 - Standard library: `pathlib`, `json`, `hashlib`, `datetime`, `time`, `os`, `re`
 
@@ -155,6 +204,10 @@ flow2/
 - `MAX_BYTES`: Optional, default 20000000 (20MB) for maximum file size
 - `OUTPUT_DIR`: Optional, base output directory path (default: current directory)
 - `DELETE_FILE_AFTER_PROCESS`: Optional, enable file deletion after successful processing (default: `false`)
+- `SHOP_DOMAIN`: Optional, shop domain for DynamoServiceClient product creation
+- `S3_IMAGE_BUCKET`: Optional, S3 bucket name for image sync (if not set, images are only saved locally)
+- `AWS_REGION`: Optional, AWS region for S3 operations (default: `ap-southeast-1`)
+- `S3_PRESIGNED_URL_EXPIRATION_HOURS`: Optional, expiration time for S3 presigned URLs in hours (default: `8760`, i.e., 1 year)
 
 ## Usage
 
@@ -179,16 +232,22 @@ The flow is executed via the main `flow2.py` script with command-line arguments:
 ```
 outputs/
 └── run_YYYYMMDD_HHMMSS/
-    └── responses/
-        └── (directory created, currently unused)
+    ├── responses/
+    │   └── (directory created, currently unused)
+    └── images/
+        └── (extracted images from PDFs, organized by PDF filename)
+            └── pdf_stem/
+                └── extracted_image.png
 ```
 
-Note: Response files are not currently written to disk. The `responses/` directory is created but remains empty. Processing results are logged and stored in memory.
+Note: Response files are not currently written to disk. The `responses/` directory is created but remains empty. Processing results are logged and stored in memory. The `images/` directory contains extracted images from PDFs, organized by PDF filename stem.
 
 ## Error Handling
 
 - Step failures are tracked in result dictionaries with `success` boolean and `error` message
 - File processing errors are captured per-file without stopping the entire flow
+- Image extraction errors are logged per-file but do not stop the flow
+- S3 sync failures are logged but do not stop the flow (images remain in local directory)
 - DynamoServiceClient unavailability is handled gracefully (extraction continues, creation is skipped)
 - File deletion failures are logged but do not stop the flow
 - Exit codes: 0 for success, 1 for errors, 2 for initialization failures
@@ -201,6 +260,25 @@ If `--sender_mapping_file` is provided, products are enriched with sender inform
 - Prefix is extracted and used to lookup sender_email and sender_name from mapping file
 - Mapping file format: `{"prefix": {"sender_email": "...", "sender_name": "..."}}`
 - Enriched fields are added to each product: `sender_email` and `sender_name`
+
+## Image Extraction
+
+Step 5 extracts images from PDF files for products that have bounding box coordinates:
+
+- **Input**: PDF files with products containing `associated_image_bbox` and `product_name_bbox` fields
+- **Process**:
+  - Extracts images from PDF pages based on bounding box coordinates
+  - Detects image position relative to product name using canary detection (ABOVE, LEFT, NONE)
+  - Saves images to local `images/` directory, organized by PDF filename stem
+- **S3 Sync** (optional):
+  - If `S3_IMAGE_BUCKET` is set, images are uploaded to S3
+  - Presigned URLs are generated and added to product `images` array
+  - URLs are valid for the duration specified by `S3_PRESIGNED_URL_EXPIRATION_HOURS`
+- **Output**: Products enriched with:
+  - `extracted_image_name`: Relative path to extracted image file
+  - `extracted_image_page`: Page number where image was found
+  - `extracted_image_position`: Position relative to product name (ABOVE, LEFT, NONE)
+  - `images`: Array of S3 presigned URLs (if S3 sync enabled)
 
 ## Relationship to Other Flows
 
